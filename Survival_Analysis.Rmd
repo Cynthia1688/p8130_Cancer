@@ -1,0 +1,215 @@
+---
+title: "Breast cancer survival prediction"
+author: "Yangyang Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+**Description**
+This is a dataset of breast cancer patients from a prospective study. Information including variables 1-14 were collected at the baseline, the column `Survival Months` records the length of following-up, and the column `Status` records the survival status of the patients at the end of their following-up. We are primarily interested in predicting the risk of death based on features 1-14.
+1. Age
+
+2. Race
+
+3. Marital Status
+
+4. T Stage: Adjusted AJCC 6th T
+
+5. N Stage: Adjusted AJCC 6th N
+
+6. 6th Stage: Breast Adjusted AJCC 6th Stage
+
+7. Differentiate
+
+8. Grade
+
+9. A Stage: Regional — A neoplasm that has extended; Distant — A neoplasm that has spread to parts of the body remote from
+
+10. Tumor Size: Each indicates exact size in millimeters.
+
+11. Estrogen Status
+
+12. Progesterone Status
+
+13. Regional Node Examined
+
+14. Reginol Node Positive
+
+15. Survival Months
+
+16. Status: Dead / Alive
+
+**Analytical goal** (you may only address some of them but properly addressing more will improve the rate of your report):
+
+1. Using variables 1-14 as the covariates to predict the risk of death.
+
+2. Which factors (features) affect the risk significantly? Are there interacting effects?
+
+3. Evaluate the performance of your model(s). Is your model achieving similar performance between the majority race group “White” and the minority “Black” (or “Black” + “Other”)? If not, could you try to improve the fairness (i.e., reducing the gap of prediction performance between the majority and minority) of your model(s)?
+
+**Suggestions and tips:**
+In the report, you should describe your final model and interpret its parameters in an accurate and useful manner. It is expected that you would first examine the _marginal distributions_ and _pairwise relationships_ between variables (e.g., to check to see whether any _nonlinearities_ are immediately obvious), that you would explore several candidate models, and explain why you selected your model.
+
+Also, you should check for violations of regression model assumptions, influential observations, multicollinearity, etc. This project may involve _logistic or survival models_ not introduced in our class, which gives you a 5 points bonus. It would be great if you could be an active learner and figure out these challenges. In addition, model evaluation and fairness mentioned in the above Point 3 are interesting topics, on which you could try to explore.
+It would be helpful to be clear about your motivation for carrying out certain analyses as well as to be clear about interpretations of fitted model parameters. Your report should include a _table_ summarizing parameter estimates associated with your final fitted model, characterizing predictor variables in a way that a reader can clearly understand.
+
+Below you’ll find some aspects to be addressed in your report. These are just a few suggestions, but feel free to add your own input/creativity to the analysis:
+
+• Data exploration: descriptive statistics and visualization. You might want to, for instance:
+
+o Include _a descriptive table_ with summary statistics for all variables;
+
+o Explore the _distribution of the outcome_ and consider potential _transformations_ (if necessary);
+
+o See if there are any unusual observations and consider them as potential
+_outliers/influential points_.
+
+• In your regression model, be watchful for variables that are highly _correlated_ and be selective in the variables you will include in your analysis.
+
+• Consider selective _interactions_ between variables.
+
+• DO NOT IGNORE _MODEL DIAGNOSTICS_
+
+```{r, include = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(viridis)
+library(modelr)
+library(mgcv)
+library(latex2exp)
+library(leaps)
+library(survival)
+library(autoReg)
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+```
+
+**Methods**
+
+_1. Data Description_
+```{r}
+cancer_df = 
+  read_csv("Project_2_data.csv") |> 
+  janitor::clean_names() |> 
+  as.data.frame()
+
+# Change the factor variables
+col_names = 
+  cancer_df |> select_if(is.character) |> colnames() |> as.vector()
+
+cancer_df[,col_names] = 
+  lapply(cancer_df[,col_names], factor)
+
+# add id col
+cancer_df = 
+  cancer_df |> 
+  mutate(ID = 1:nrow(cancer_df)) |> 
+  relocate(ID, everything())
+```
+The numeric descriptive statistics are:
+
+`r cancer_df |> select_if(is.numeric) |> summary() |> knitr::kable(digits = 3)`
+
+
+```{r}
+age_plt = 
+  cancer_df |> 
+  ggplot(aes(x = tumor_size)) +
+  geom_density(color = "blue", fill = "blue", alpha = 0.1) +
+  labs(
+    title = "age density plot",
+    x = "age"
+  )
+
+tumor_size_plt = 
+  cancer_df |> 
+  ggplot(aes(x = tumor_size)) +
+  geom_density(color = "blue", fill = "blue", alpha = 0.1) +
+  labs(
+    title = "tumor size density plot",
+    x = "tumor size"
+  )
+
+reg_node_exam_plt = 
+  cancer_df |> 
+  ggplot(aes(x = regional_node_examined)) +
+  geom_density(color = "blue", fill = "blue", alpha = 0.1) +
+  labs(
+    title = "regional node examined density plot",
+    x = "regional node examined"
+  )
+
+reg_node_pos_plt = 
+  cancer_df |> 
+  ggplot(aes(x = reginol_node_positive)) +
+  geom_density(color = "blue", fill = "blue", alpha = 0.1) +
+  labs(
+    title = "regional node positve density plot",
+    x = "regional node positive"
+  )
+
+months_plt = 
+  cancer_df |> 
+  ggplot(aes(x = survival_months)) +
+  geom_density(color = "blue", fill = "blue", alpha = 0.1) +
+  labs(
+    title = "survival_months density plot",
+    x = "survival_months"
+  )
+
+gridExtra::grid.arrange(
+  age_plt, 
+  tumor_size_plt, 
+  reg_node_exam_plt,
+  reg_node_pos_plt, 
+  months_plt, 
+  nrow = 2,
+  ncol = 3)
+```
+
+Comparing all numeric variables distribution, we have decided to conduct log-transform on `reginol_node_positive` variable:
+
+```{r}
+org_reg_plt = 
+  cancer_df |> 
+  ggplot(aes(x = reginol_node_positive)) +
+  geom_density(color = "blue", fill = "blue", alpha = 0.1) +
+  labs(
+    title = "regional node positve density plot",
+    x = "regional node positive"
+  )
+
+log_reg_plt = 
+  cancer_df |> 
+  ggplot(aes(x = log(reginol_node_positive))) +
+  geom_density(color = "blue", fill = "blue", alpha = 0.1) +
+  labs(
+    title = "regional node positve density plot",
+    x = "regional node positive"
+  )
+gridExtra::grid.arrange(org_reg_plt, log_reg_plt, nrow = 1)
+```
+
+```{r}
+# cox_model = 
+#   coxph(Surv(survival_months, status) ~ age + race + marital_status + t_stage + n_stage + x6th_stage + differentiate + grade + a_stage + tumor_size + estrogen_status + progesterone_status + regional_node_examined + reginol_node_positive, data = cancer_df, id = ID)
+# summary(cox_model)
+# autoReg(cox_model, uni = TRUE, threshold = 0.05, final = TRUE)
+# myft(ft3)
+```
+
