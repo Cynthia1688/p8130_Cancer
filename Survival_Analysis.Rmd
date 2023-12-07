@@ -70,6 +70,7 @@ _outliers/influential points_.
 
 • DO NOT IGNORE _MODEL DIAGNOSTICS_
 
+# _EDA_
 ```{r, include = FALSE, message = FALSE, warning = FALSE}
 library(tidyverse)
 library(viridis)
@@ -115,11 +116,22 @@ col_names =
 cancer_df[,col_names] = 
   lapply(cancer_df[,col_names], factor)
 
-# add id col
+# Change character variable "Status" to binary variables
 cancer_df = 
   cancer_df |> 
-  mutate(ID = 1:nrow(cancer_df)) |> 
-  relocate(ID, everything())
+  mutate(
+    status = 
+      case_match(
+        status,
+        "Alive" ~ 0,
+        "Dead" ~ 1),
+    status = as.factor(status)
+  )
+# # add id col
+# cancer_df = 
+#   cancer_df |> 
+#   mutate(ID = 1:nrow(cancer_df)) |> 
+#   relocate(ID, everything())
 ```
 The numeric descriptive statistics are:
 
@@ -211,5 +223,82 @@ gridExtra::grid.arrange(org_reg_plt, log_reg_plt, nrow = 1)
 # summary(cox_model)
 # autoReg(cox_model, uni = TRUE, threshold = 0.05, final = TRUE)
 # myft(ft3)
+```
+
+# _Methods_
+```{r}
+#load relevant packages
+library(survminer)
+library(survival)
+library(ggplot2)
+library(tidyverse)
+library(My.stepwise)
+library(corrr)
+library(gtools)
+# 
+# #import data
+# cancer_df = 
+#   read_csv("Project_2_data.csv") |> 
+#   janitor::clean_names() |> 
+#   as.data.frame()
+# 
+# # Change the factor variables
+# col_names = 
+#   cancer_df |> select_if(is.character) |> colnames() |> as.vector()
+
+#variable summary. Output not shown
+#variablesummary <- lapply(df[,1:10], table)
+variablesummary <- lapply(cancer_df[,1:14], table)
+```
+
+```{r}
+#correlation plot
+res.cor <- correlate(cancer_df[,1:14])
+cancer_cor <- res.cor %>% stretch()
+cancer_cor[is.na(cancer_cor)]<-0
+
+cancer_cor %>%
+  ggplot(aes(x, y, col=r)) + 
+  geom_tile(col="white", fill="white") +
+  geom_point(aes(size = abs(r)), shape=16) +
+  labs(x = "", y = "", col = "Correlation \nCoefficient", title="") +
+  scale_color_gradient2(low="#2903e8",high="#c7000d",mid="#fbfef9", limits=c(-1,1))+
+  scale_x_discrete(expand = c(0,0),labels=c("age", "anemia", "creatinine phosphokinase", "diabetes", "ejection fraction", "blood pressure", "platelets", "serum creatinine", "serum sodium", "sex", "smoking")) +
+  scale_y_discrete(expand = c(0,0), labels = c("age", "anemia", "creatinine phosphokinase", "diabetes", "ejection fraction", "blood pressure", "platelets", "serum creatinine", "serum sodium", "sex", "smoking")) +
+  scale_size(range=c(1,8), guide = NULL)+
+  theme(axis.line = element_line(colour = "black", 
+                      linewidth = 1, linetype = "solid"),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+## Data Discretization
+```{r}
+#divide continuous variables into quartiles
+cancer_df = 
+  cancer_df |> 
+  mutate(
+    agequant = quantcut(age,4),
+    tumor_size_quant = quantcut(tumor_size,4),
+    regional_examined_quant = quantcut(regional_node_examined,4),
+    reginol_positive_quant = quantcut(reginol_node_positive,4)
+  )
+```
+
+```{r}
+#Kaplan-Meier estimators for significant variables. Plots found in Results section
+# KM_age <- survfit(Surv(survival_months, status)~agequant, data = cancer_df)
+# KM_tumor_size <- survfit(Surv(survival_months, status)~tumor_size_quant, data = cancer_df)
+# KM_regional_examined <- survfit(Surv(survival_months, status)~regional_examined_quant, data = cancer_df)
+# KM_reginol_positive <- survfit(Surv(survival_months, status)~reginol_positive_quant, data = cancer_df)
+# 
+# KMplots1<- ggsurvplot(fit = KM_age, data = cancer_df, conf.int = F, title = "", ylab = "Survival Probability", xlab = "Days", legend.labs = c("normal blood pressure", "high blood pressure"), pval = T, risk.table = F, palette = c("#2903e8", "#c7000d"), ggtheme = theme_bw(),legend.title = "")
+# 
+# KMplots2<- ggsurvplot(fit = KM_age, data = cancer_df, conf.int = F, title = "", ylab = "Survival Probability", xlab = "Days", pval = T,legend.labs = c("30-47", "54-61", "47-54", "61-69"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+# 
+# KMplots3 <- ggsurvplot(fit = KM_efquant, data = df, conf.int = F, title = "", ylab = "Survival Probability", xlab = "Days", pval = T, legend.labs = c("14-30%", "30-38%", "38-45%", "45-80%"), legend.title ="", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+# KMplots4 <- ggsurvplot(fit = KM_scquant, data = df, conf.int = F, title = "", ylab = "Survival Probability", xlab = "Days", pval = T, legend.labs = c("0.5-0.9", "0.9-1.1", "1.1-1.4", "1.4-1.9"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+# 
+# KMplots5 <- ggsurvplot(fit = KM_ssquant, data = df, conf.int = F, title = "", ylab = "Survival Probability", xlab = "Days", pval = T, legend.labs = c("113-134", "134-137", "137-140", "140-148"), legend.title ="", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
 ```
 
