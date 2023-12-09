@@ -124,14 +124,8 @@ cancer_df =
       case_match(
         status,
         "Alive" ~ 0,
-        "Dead" ~ 1),
-    status = as.factor(status)
+        "Dead" ~ 1)
   )
-# # add id col
-# cancer_df = 
-#   cancer_df |> 
-#   mutate(ID = 1:nrow(cancer_df)) |> 
-#   relocate(ID, everything())
 ```
 The numeric descriptive statistics are:
 
@@ -217,15 +211,150 @@ log_reg_plt =
 gridExtra::grid.arrange(org_reg_plt, log_reg_plt, nrow = 1)
 ```
 
-```{r}
-# cox_model = 
-#   coxph(Surv(survival_months, status) ~ age + race + marital_status + t_stage + n_stage + x6th_stage + differentiate + grade + a_stage + tumor_size + estrogen_status + progesterone_status + regional_node_examined + reginol_node_positive, data = cancer_df, id = ID)
-# summary(cox_model)
-# autoReg(cox_model, uni = TRUE, threshold = 0.05, final = TRUE)
-# myft(ft3)
+Comparing plots before and after log-transformation, we decided to  abandoned log-transform on `reginol_node_positive` variable and adopt other methods to analyze.
+
+# Results
+
+## Univariate Analysis
+
+```{r message=FALSE, echo=FALSE}
+#load relevant packages
+library(survminer)
+library(survival)
+library(ggplot2)
+library(tidyverse)
+library(My.stepwise)
+library(corrr)
+library(gtools)
+
+#import data
+cancer_df =
+  read_csv("Project_2_data.csv") |>
+  janitor::clean_names() |>
+  as.data.frame()
+
+# Change the factor variables
+col_names =
+  cancer_df |> select_if(is.character) |> colnames() |> as.vector()
+
+#variable summary. Output not shown
+variablesummary <- lapply(cancer_df[,1:14], table)
+
+# Change character variable "Status" to binary variables
+cancer_df = 
+  cancer_df |> 
+  mutate(
+    status = 
+      case_match(
+        status,
+        "Alive" ~ 0,
+        "Dead" ~ 1)
+  )
+
+res.cor <- correlate(cancer_df[,1:14])
+cancer_cor <- res.cor %>% stretch()
+cancer_cor[is.na(cancer_cor)]<-0
+
+corr_plot = 
+  cancer_cor %>%
+  ggplot(aes(x, y, col=r)) + 
+  geom_tile(col="white", fill="white") +
+  geom_point(aes(size = abs(r)), shape=16) +
+  labs(x = "", y = "", col = "Correlation \nCoefficient", title="Correlation Plot") +
+  scale_color_gradient2(low="#2903e8",high="#c7000d",mid="#fbfef9", limits=c(-1,1))+
+  scale_x_discrete(expand = c(0,0),labels=c("age", "race", "marital status", "t stage", "n stage", "6th stage", "differentiate", "grade", "a stage", "tumor size", "estrogen status", "progesterone status", "regional node examined", "reginol node positive")) +
+  scale_y_discrete(expand = c(0,0), labels = c("age", "race", "marital status", "t stage", "n stage", "6th stage", "differentiate", "grade", "a stage", "tumor size", "estrogen status", "progesterone status", "regional node examined", "reginol node positive")) +
+  scale_size(range=c(1,8), guide = NULL)+
+  theme(axis.line = element_line(colour = "black", 
+                      linewidth = 1, linetype = "solid"),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+cancer_df = 
+  cancer_df |> 
+  mutate(
+    agequant = quantcut(age,4),
+    tumor_size_quant = quantcut(tumor_size,4),
+    regional_examined_quant = quantcut(regional_node_examined,4),
+    reginol_positive_quant = quantcut(reginol_node_positive,4)
+  )
+
+KM_age <- survfit(Surv(survival_months, status)~agequant, data = cancer_df)
+KM_tumor_size <- survfit(Surv(survival_months, status)~tumor_size_quant, data = cancer_df)
+KM_reginol_positive <- survfit(Surv(survival_months, status)~reginol_positive_quant, data = cancer_df)
+KM_race = survfit(Surv(survival_months, status)~race, data = cancer_df)
+KM_marital = survfit(Surv(survival_months, status)~marital_status, data = cancer_df)
+KM_t_stage = survfit(Surv(survival_months, status)~t_stage, data = cancer_df)
+KM_n_stage = survfit(Surv(survival_months, status)~n_stage, data = cancer_df)
+KM_6_stage = survfit(Surv(survival_months, status)~x6th_stage, data = cancer_df)
+KM_diff = survfit(Surv(survival_months, status)~differentiate, data = cancer_df)
+KM_grade = survfit(Surv(survival_months, status)~grade, data = cancer_df)
+KM_a_stage = survfit(Surv(survival_months, status)~a_stage, data = cancer_df)
+KM_estrogen = survfit(Surv(survival_months, status)~estrogen_status, data = cancer_df)
+KM_progesterone = survfit(Surv(survival_months, status)~progesterone_status, data = cancer_df)
+
+KMplots_age<- ggsurvplot(fit = KM_age, data = cancer_df, conf.int = F, title = "Age", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("30-47", "54-61", "47-54", "61-69"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_tumor <- ggsurvplot(fit = KM_tumor_size, data = cancer_df, conf.int = F, title = "Tumor Size (mm)", ylab = "Survival Probability", xlab = "Months", pval = T, legend.labs = c("1-16mm", "17-25mm", "26-38mm", "39-140mm%"), legend.title ="", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_positive <- ggsurvplot(fit = KM_reginol_positive, data = cancer_df, conf.int = F, title = "Reginol Node Positive", ylab = "Survival Probability", xlab = "Months", pval = T, legend.labs = c("1", "2", "3-5", "6-46"), legend.title ="", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_race<- ggsurvplot(fit = KM_race, data = cancer_df, conf.int = F, title = "Race", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Black", "Other", "White" ), legend.title = "", palette = c("#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_marital<- ggsurvplot(fit = KM_marital, data = cancer_df, conf.int = F, title = "Marital Status", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Divorced", "Married", "Separated", "Single", "Widowed"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d", "#006400"), ggtheme = theme_bw())
+
+KMplots_t_stage<- ggsurvplot(fit = KM_t_stage, data = cancer_df, conf.int = F, title = "T Stage: Adjusted AJCC 6th T", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("T1", "T2", "T3", "T4" ), legend.title = "", palette = c("#006400", "#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_n_stage<- ggsurvplot(fit = KM_n_stage, data = cancer_df, conf.int = F, title = "N Stage: Adjusted AJCC 6th N", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("N1", "N2", "N3" ), legend.title = "", palette = c("#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_6_stage<- ggsurvplot(fit = KM_6_stage, data = cancer_df, conf.int = F, title = "6th Stage: Breast Adjusted AJCC 6th Stage", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Moderately differentiated", "Married", "Separated", "Single", "Widowed"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d", "#006400"), ggtheme = theme_bw())
+
+KMplots_diff<- ggsurvplot(fit = KM_diff, data = cancer_df, conf.int = F, title = "Differentiate", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Moderately", "Poorly", "Undifferentiated", "Well"), legend.title = "", palette = c("#8702e0", "#2903e8", "#c7000d", "#006400"), ggtheme = theme_bw())
+
+KMplots_grade<- ggsurvplot(fit = KM_grade, data = cancer_df, conf.int = F, title = "Grade", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("1", "2", "3", "4 (anaplastic)"), legend.title = "", palette = c("#8702e0", "#2903e8", "#c7000d", "#006400"), ggtheme = theme_bw())
+
+KMplots_a_stage<- ggsurvplot(fit = KM_a_stage, data = cancer_df, conf.int = F, title = "A Stage", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Distant", "Regional"), legend.title = "", palette = c("#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_estrogen <- ggsurvplot(fit = KM_estrogen, data = cancer_df, conf.int = F, title = "Estrogen Status", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Negative", "Positive"), legend.title = "", palette = c("#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_progesterone <- ggsurvplot(fit = KM_progesterone, data = cancer_df, conf.int = F, title = "Progesterone Status", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Negative", "Positive"), legend.title = "", palette = c("#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+#Kaplain-Meier estimators and plots for non-significant variables
+KM_regional_examined <- survfit(Surv(survival_months, status)~regional_examined_quant, data = cancer_df)
+
+KMplots_examined <- ggsurvplot(fit = KM_regional_examined, data = cancer_df, conf.int = F, title = "", ylab = "Survival Probability", xlab = "Months", pval = T, legend.labs = c("1-9", "10-14", "15-19", "20-61"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
 ```
 
-# _Methods_
+Kaplan-Meier plots of each variable with a significant log rank test result. Non-significant Kaplan-Meier plots can be found in Appendix A.
+```{r message=FALSE}
+KMplots_age
+KMplots_tumor
+```
+**Figure 2.** Kaplan-Meier survival curves for blood pressure binary variable (left), and age variable (right). The survival time for individuals with high blood pressure is significantly different from individuals with normal blood pressure. Survival time for individuals aged 70 appears significantly different than all other age groups. P-values for log rank tests do not specify which group(s) are significantly different, however plots can be used to discern visual differences.
+
+```{r message=FALSE}
+# KMplots_positive
+# KMplots_race
+# KMplots_marital
+# KMplots_t_stage
+# KMplots_n_stage
+# KMplots_6_stage
+# KMplots_diff
+# KMplots_grade
+# KMplots_a_stage
+# KMplots_estrogen
+# KMplots_progesterone
+```
+
+# Model Interpretation and Discussion
+
+# Conclusion
+
+# Reference
+
+# Appendix A:
+
+Exploratory Analysis, Correlation Coefficient Plot, Kaplan-Meier plots with log rank test.
 ```{r}
 #load relevant packages
 library(survminer)
@@ -235,20 +364,30 @@ library(tidyverse)
 library(My.stepwise)
 library(corrr)
 library(gtools)
-# 
-# #import data
-# cancer_df = 
-#   read_csv("Project_2_data.csv") |> 
-#   janitor::clean_names() |> 
-#   as.data.frame()
-# 
-# # Change the factor variables
-# col_names = 
-#   cancer_df |> select_if(is.character) |> colnames() |> as.vector()
+
+#import data
+cancer_df =
+  read_csv("Project_2_data.csv") |>
+  janitor::clean_names() |>
+  as.data.frame()
+
+# Change the factor variables
+col_names =
+  cancer_df |> select_if(is.character) |> colnames() |> as.vector()
 
 #variable summary. Output not shown
-#variablesummary <- lapply(df[,1:10], table)
 variablesummary <- lapply(cancer_df[,1:14], table)
+
+# Change character variable "Status" to binary variables
+cancer_df = 
+  cancer_df |> 
+  mutate(
+    status = 
+      case_match(
+        status,
+        "Alive" ~ 0,
+        "Dead" ~ 1)
+  )
 ```
 
 ```{r}
@@ -261,17 +400,16 @@ cancer_cor %>%
   ggplot(aes(x, y, col=r)) + 
   geom_tile(col="white", fill="white") +
   geom_point(aes(size = abs(r)), shape=16) +
-  labs(x = "", y = "", col = "Correlation \nCoefficient", title="") +
+  labs(x = "", y = "", col = "Correlation \nCoefficient", title="Correlation Plot") +
   scale_color_gradient2(low="#2903e8",high="#c7000d",mid="#fbfef9", limits=c(-1,1))+
-  scale_x_discrete(expand = c(0,0),labels=c("age", "anemia", "creatinine phosphokinase", "diabetes", "ejection fraction", "blood pressure", "platelets", "serum creatinine", "serum sodium", "sex", "smoking")) +
-  scale_y_discrete(expand = c(0,0), labels = c("age", "anemia", "creatinine phosphokinase", "diabetes", "ejection fraction", "blood pressure", "platelets", "serum creatinine", "serum sodium", "sex", "smoking")) +
+  scale_x_discrete(expand = c(0,0),labels=c("age", "race", "marital status", "t stage", "n stage", "6th stage", "differentiate", "grade", "a stage", "tumor size", "estrogen status", "progesterone status", "regional node examined", "reginol node positive")) +
+  scale_y_discrete(expand = c(0,0), labels = c("age", "race", "marital status", "t stage", "n stage", "6th stage", "differentiate", "grade", "a stage", "tumor size", "estrogen status", "progesterone status", "regional node examined", "reginol node positive")) +
   scale_size(range=c(1,8), guide = NULL)+
   theme(axis.line = element_line(colour = "black", 
                       linewidth = 1, linetype = "solid"),
         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
-## Data Discretization
 ```{r}
 #divide continuous variables into quartiles
 cancer_df = 
@@ -286,19 +424,53 @@ cancer_df =
 
 ```{r}
 #Kaplan-Meier estimators for significant variables. Plots found in Results section
-# KM_age <- survfit(Surv(survival_months, status)~agequant, data = cancer_df)
-# KM_tumor_size <- survfit(Surv(survival_months, status)~tumor_size_quant, data = cancer_df)
-# KM_regional_examined <- survfit(Surv(survival_months, status)~regional_examined_quant, data = cancer_df)
-# KM_reginol_positive <- survfit(Surv(survival_months, status)~reginol_positive_quant, data = cancer_df)
-# 
-# KMplots1<- ggsurvplot(fit = KM_age, data = cancer_df, conf.int = F, title = "", ylab = "Survival Probability", xlab = "Days", legend.labs = c("normal blood pressure", "high blood pressure"), pval = T, risk.table = F, palette = c("#2903e8", "#c7000d"), ggtheme = theme_bw(),legend.title = "")
-# 
-# KMplots2<- ggsurvplot(fit = KM_age, data = cancer_df, conf.int = F, title = "", ylab = "Survival Probability", xlab = "Days", pval = T,legend.labs = c("30-47", "54-61", "47-54", "61-69"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
-# 
-# KMplots3 <- ggsurvplot(fit = KM_efquant, data = df, conf.int = F, title = "", ylab = "Survival Probability", xlab = "Days", pval = T, legend.labs = c("14-30%", "30-38%", "38-45%", "45-80%"), legend.title ="", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+KM_age <- survfit(Surv(survival_months, status)~agequant, data = cancer_df)
+KM_tumor_size <- survfit(Surv(survival_months, status)~tumor_size_quant, data = cancer_df)
+KM_reginol_positive <- survfit(Surv(survival_months, status)~reginol_positive_quant, data = cancer_df)
+KM_race = survfit(Surv(survival_months, status)~race, data = cancer_df)
+KM_marital = survfit(Surv(survival_months, status)~marital_status, data = cancer_df)
+KM_t_stage = survfit(Surv(survival_months, status)~t_stage, data = cancer_df)
+KM_n_stage = survfit(Surv(survival_months, status)~n_stage, data = cancer_df)
+KM_6_stage = survfit(Surv(survival_months, status)~x6th_stage, data = cancer_df)
+KM_diff = survfit(Surv(survival_months, status)~differentiate, data = cancer_df)
+KM_grade = survfit(Surv(survival_months, status)~grade, data = cancer_df)
+KM_a_stage = survfit(Surv(survival_months, status)~a_stage, data = cancer_df)
+KM_estrogen = survfit(Surv(survival_months, status)~estrogen_status, data = cancer_df)
+KM_progesterone = survfit(Surv(survival_months, status)~progesterone_status, data = cancer_df)
 
-# KMplots4 <- ggsurvplot(fit = KM_scquant, data = df, conf.int = F, title = "", ylab = "Survival Probability", xlab = "Days", pval = T, legend.labs = c("0.5-0.9", "0.9-1.1", "1.1-1.4", "1.4-1.9"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
-# 
-# KMplots5 <- ggsurvplot(fit = KM_ssquant, data = df, conf.int = F, title = "", ylab = "Survival Probability", xlab = "Days", pval = T, legend.labs = c("113-134", "134-137", "137-140", "140-148"), legend.title ="", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+KMplots_age<- ggsurvplot(fit = KM_age, data = cancer_df, conf.int = F, title = "Age", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("30-47", "54-61", "47-54", "61-69"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_tumor <- ggsurvplot(fit = KM_tumor_size, data = cancer_df, conf.int = F, title = "Tumor Size (mm)", ylab = "Survival Probability", xlab = "Months", pval = T, legend.labs = c("1-16mm", "17-25mm", "26-38mm", "39-140mm%"), legend.title ="", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_positive <- ggsurvplot(fit = KM_reginol_positive, data = cancer_df, conf.int = F, title = "Reginol Node Positive", ylab = "Survival Probability", xlab = "Months", pval = T, legend.labs = c("1", "2", "3-5", "6-46"), legend.title ="", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_race<- ggsurvplot(fit = KM_race, data = cancer_df, conf.int = F, title = "Race", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Black", "Other", "White" ), legend.title = "", palette = c("#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_marital<- ggsurvplot(fit = KM_marital, data = cancer_df, conf.int = F, title = "Marital Status", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Divorced", "Married", "Separated", "Single", "Widowed"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d", "#006400"), ggtheme = theme_bw())
+
+KMplots_t_stage<- ggsurvplot(fit = KM_t_stage, data = cancer_df, conf.int = F, title = "T Stage: Adjusted AJCC 6th T", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("T1", "T2", "T3", "T4" ), legend.title = "", palette = c("#006400", "#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_n_stage<- ggsurvplot(fit = KM_n_stage, data = cancer_df, conf.int = F, title = "N Stage: Adjusted AJCC 6th N", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("N1", "N2", "N3" ), legend.title = "", palette = c("#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_6_stage<- ggsurvplot(fit = KM_6_stage, data = cancer_df, conf.int = F, title = "6th Stage: Breast Adjusted AJCC 6th Stage", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Moderately differentiated", "Married", "Separated", "Single", "Widowed"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d", "#006400"), ggtheme = theme_bw())
+
+KMplots_diff<- ggsurvplot(fit = KM_diff, data = cancer_df, conf.int = F, title = "Differentiate", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Moderately", "Poorly", "Undifferentiated", "Well"), legend.title = "", palette = c("#8702e0", "#2903e8", "#c7000d", "#006400"), ggtheme = theme_bw())
+
+KMplots_grade<- ggsurvplot(fit = KM_grade, data = cancer_df, conf.int = F, title = "Grade", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("1", "2", "3", "4 (anaplastic)"), legend.title = "", palette = c("#8702e0", "#2903e8", "#c7000d", "#006400"), ggtheme = theme_bw())
+
+KMplots_a_stage<- ggsurvplot(fit = KM_a_stage, data = cancer_df, conf.int = F, title = "A Stage", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Distant", "Regional"), legend.title = "", palette = c("#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_estrogen <- ggsurvplot(fit = KM_estrogen, data = cancer_df, conf.int = F, title = "Estrogen Status", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Negative", "Positive"), legend.title = "", palette = c("#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_progesterone <- ggsurvplot(fit = KM_progesterone, data = cancer_df, conf.int = F, title = "Progesterone Status", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Negative", "Positive"), legend.title = "", palette = c("#2903e8", "#c7000d"), ggtheme = theme_bw())
+```
+
+```{r}
+#Kaplain-Meier estimators and plots for non-significant variables
+KM_regional_examined <- survfit(Surv(survival_months, status)~regional_examined_quant, data = cancer_df)
+
+KMplots_examined <- ggsurvplot(fit = KM_regional_examined, data = cancer_df, conf.int = F, title = "", ylab = "Survival Probability", xlab = "Months", pval = T, legend.labs = c("1-9", "10-14", "15-19", "20-61"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+KMplots_examined
 ```
 
