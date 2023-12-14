@@ -1,0 +1,51 @@
+---
+title: "cox_ph"
+author: "Yunshen Bai"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r,message=FALSE}
+library(tidyverse)
+library(survival)
+library(survminer)
+library(MASS)
+library(ggplot2)
+```
+
+
+clean the data
+```{r,message=FALSE}
+cancer_df=read_csv("Project_2_data.csv")|>
+  janitor::clean_names() |>
+  drop_na()
+  
+col_names = 
+  cancer_df |> select_if(is.character) |> colnames() |> as.vector()
+
+cancer_df[,col_names] = 
+  lapply(cancer_df[,col_names], factor) 
+
+cancer_df = 
+  cancer_df |> 
+  mutate(
+    status = 
+      case_match(
+        status,
+        "Alive" ~ 0,
+        "Dead" ~ 1)
+  )
+```
+
+
+```{r}
+model=coxph(Surv(survival_months,status)~.,data=cancer_df)
+
+model=stepAIC(model)
+```
+
+```{r}
+ggsurvplot(survfit(model,data=cancer_df), palette= '#2E9FDF',
+           ggtheme = theme_minimal())
+```
+
+
