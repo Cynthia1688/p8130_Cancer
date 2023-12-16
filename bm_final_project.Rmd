@@ -34,7 +34,7 @@ library(ResourceSelection)
 
 ```{r}
 heart_df = 
-  read_csv("../hw/data_file/Project_2_data.csv") |> 
+  read_csv("./Project_2_data.csv") |> 
   janitor::clean_names() |> 
   relocate(survival_months, status) |> 
   mutate(
