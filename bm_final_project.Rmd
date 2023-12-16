@@ -28,6 +28,8 @@ library(regplot)
 library(glmnet)
 library(caret)
 library(ResourceSelection)
+library(MASS)
+library(cowplot)
 ```
 
 # clean the data
@@ -67,14 +69,14 @@ variablesummary =
 ```
 
 <font color = "blue">1. outcome: 1 continuous; 1 binary
-2. predicators: 4 continuous; 10 categorical</font>
+2. predictors: 4 continuous; 10 categorical</font>
 
 
 
-# find outliers 
+# examine predictors 
 
 ```{r}
-# Boxplots for each variable
+# Boxplots for each continuous variable
 par(mfrow=c(2,3))
 boxplot(heart_df$survival_months, main='survival_months')
 boxplot(heart_df$age, main='age')
@@ -82,7 +84,7 @@ boxplot(heart_df$tumor_size, main='tumor_size')
 boxplot(heart_df$rne, main='rne')
 boxplot(heart_df$rnp, main='rnp')
 
-# Histograms for other variables
+# Histograms for each categorical variables
 par(mfrow=c(1,2))
 hist(heart_df$status, main='status')
 hist(heart_df$race, main='race')
@@ -95,19 +97,35 @@ hist(heart_df$grade, main='grade')
 hist(heart_df$est, main='est')
 hist(heart_df$est, main='pro')
 
-# density for other variables
-par(mfrow=c(2,3))
-heart_df |> 
-  mutate(lnrnp = log(rnp)) |> 
-  ggplot(aes(x = lnrnp))+geom_density()
-boxplot(heart_df$survival_months, main='survival_months')
-boxplot(heart_df$age, main='age')
-boxplot(heart_df$tumor_size, main='tumor_size')
-boxplot(heart_df$rne, main='rne')
-boxplot(heart_df$rnp, main='rnp')
 ```
 
-<font color = "blue">most data are right-skewed</font>
+<font color = "blue">1, tumor, rne, rnp significant right-skewed. 2, some categorical variable has powerful correlation.</font>
+
+# transform by boxcox
+
+```{r}
+# density for continuous variables
+
+# heart_df |> 
+#   mutate(lnsurvival = log(rnp)) |> 
+#   ggplot(aes(x = survival_months))+geom_density()
+p1 =ggplot(heart_df, aes(x = survival_months)) + geom_density()
+p2 = ggplot(heart_df, aes(x = age)) + geom_density()
+p3 = ggplot(heart_df, aes(x = tumor_size)) + geom_density()
+p4 = ggplot(heart_df, aes(x = rne)) + geom_density()
+p5 = ggplot(heart_df, aes(x = rnp)) + geom_density()
+
+combined_plot = plot_grid(p1, p2, p3, p4, p5, 
+                           ncol = 3,
+                           nrow = 2)
+combined_plot
+```
+
+```{r}
+transformed_data = boxcox(heart_df$)$x
+lambda_value <- boxcox(original_data + 1)$lambda
+```
+
 
 # examie interaction 
 
