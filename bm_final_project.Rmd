@@ -94,6 +94,17 @@ hist(heart_df$a_s, main='a_s')
 hist(heart_df$grade, main='grade')
 hist(heart_df$est, main='est')
 hist(heart_df$est, main='pro')
+
+# density for other variables
+par(mfrow=c(2,3))
+heart_df |> 
+  mutate(lnrnp = log(rnp)) |> 
+  ggplot(aes(x = lnrnp))+geom_density()
+boxplot(heart_df$survival_months, main='survival_months')
+boxplot(heart_df$age, main='age')
+boxplot(heart_df$tumor_size, main='tumor_size')
+boxplot(heart_df$rne, main='rne')
+boxplot(heart_df$rnp, main='rnp')
 ```
 
 <font color = "blue">most data are right-skewed</font>
