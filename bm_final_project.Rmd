@@ -1,16 +1,15 @@
 ---
-title: "bm_final_project"
-author: "kindle zhang"
+title: "Logistic Regression"
 date: "2023-12-06"
 output: 
   html_document:
     toc: true
     toc_float: true
-    code_folding: "show"
+    code_folding: "show" 
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
 library(tidyverse)
 library(survminer)
 library(survival)
@@ -31,9 +30,11 @@ library(ResourceSelection)
 library(MASS)
 library(cowplot)
 library(pROC)
+library(randomForest)
+library(lmtest)
 ```
 
-# clean the data
+# Clean the data
 
 ```{r}
 heart_df = 
@@ -73,11 +74,11 @@ variablesummary =
 2. predictors: 4 continuous; 10 categorical</font>
 
 
-# examine predictors 
+# Examine predictors 
 
-## for categorical variable
+## For categorical variable
 
-### graphic plot
+### Graphic plot
 
 ```{r}
 # Histograms for each categorical variables
@@ -92,12 +93,12 @@ hist(heart_df$a_s, main='a_s')
 hist(heart_df$diff, main='diff')
 hist(heart_df$grade, main='grade')
 hist(heart_df$est, main='est')
-hist(heart_df$est, main='pro')
+hist(heart_df$pro, main='pro')
 ```
 
-<font color = "blue">1, tumor, rne, rnp significant right-skewed. 2, some categorical variable has powerful correlation.</font>
+<font color = "blue">most categorical variables have a extremely skewed. And I find that some variables like `grade` has a very small level. I will focus on that in the following steps.</font>
 
-### char-squared
+### Char-squared test
 
 ```{r}
 heart_df_2 = 
@@ -143,14 +144,26 @@ result_table =
   result_table |> 
   arrange(desc(p_value))
 
-result_table
+knitr::kable(result_table)
 ```
 
-<font color = "blue">particularly, difference and grade should preserve one. delete `differentiate`. What's more, delete `n_stage`, `est`, `t_stage`</font>
+<font color = "blue">There're many categorical variables correlate with others. Particularly, difference and grade should preserve one. I delete `differentiate`. What's more, delete `x6th_stage`, `est` on account of their extremely small p-values.</font>
 
-## for continuous variable
+### Correlation for categorical variables 
 
-### graphic plot
+```{r}
+par(mfrow = c(1, 1), mar = c(5, 4, 4, 2) + 0.1)
+cor_cate = cor(heart_df[,c(2, 4:11, 13:14)])
+
+corrplot(cor_cate, type = "upper", diag = FALSE, mar = c(0, 0, 0, 0))
+```
+
+<font color = "blue"> There is apparent linear correlation among variables between diff and grade; t_s and x6_s; est and pro. with the outcome we get from chi-squared test, I delete `x6th_stage`, `est` and `diff` variable for the further study.</font>
+
+
+## For continuous variable
+
+### Graphic plot
 
 ```{r}
 # Boxplots for each continuous variable
@@ -175,6 +188,8 @@ combined_plot = plot_grid(p1, p2, p3, p4, p5,
 combined_plot
 ```
 
+<font color = "blue">Among all the 5 continuous variables, we can find that `age` is the only predictor which is normally distributed. The other three variables are not normally distributed. Because the logistic regression doesn't need the predictors to be normally distributed,  I didn't transform these predictors.</font>
+
 ### Rank-sum test and t-test
 
 ```{r}
@@ -182,62 +197,66 @@ result1 = t.test(age ~ status, data = heart_df)
 result2 = wilcox.test(tumor_size ~ status, data = heart_df)
 result3 = wilcox.test(rne ~ status, data = heart_df)
 result4 = wilcox.test(rnp ~ status, data = heart_df)
+
+broom::tidy(result1)
+broom::tidy(result2)
+broom::tidy(result3)
+broom::tidy(result4)
 ```
 
-<font color = "blue">delete `rne`</font>
+<font color = "blue"> I use two-sample t test to check age and rank-sum test check other three variables. `rne` has a different median compared between two groups stratified by `status`. But, we can't delete this variable just on account of its rank-sum test outcome, I will focus on this variable in the further study. </font>
 
-## correlation for remaining variables 
 
-```{r}
-par(mfrow = c(1, 1), mar = c(5, 4, 4, 2) + 0.1)
-cor_cate = cor(heart_df[,c(2, 3:5, 8, 10:12, 14, 16)])
-
-corrplot(cor_cate, type = "upper", diag = FALSE, mar = c(0, 0, 0, 0))
-```
-
-<font color = "blue"> There is no apparent linear correlation among variables </font>
-
-## check the dataset again
+## Check the dataset again
 
 ```{r}
 heart_df_log = 
   read_csv("./Project_2_data.csv") |> 
   janitor::clean_names() |> 
   relocate(survival_months, status) |> 
+  filter(!grade %in% c("anaplastic; Grade IV")) |> 
   mutate(
     race = factor(race, levels = c("White", "Black", "Other")),
     marital_status = factor(marital_status, levels = c("Married", "Divorced", "Single", "Widowed", "Separated")),
-    x6th_stage = factor(x6th_stage, levels = c("IIA", "IIIA", "IIIC", "IIB", "IIIB")),
-    grade = factor(grade, levels = c("3", "2", "1", "anaplastic; Grade IV")),
+    t_stage = factor(t_stage, levels = c("T1", "T2", "T3", "T4")),
+    n_stage = factor(n_stage, levels = c("N1", "N2", "N3")),
+    grade = factor(grade, levels = c("3", "2", "1")),
     a_stage = factor(a_stage, levels = c("Regional", "Distant")),
     progesterone_status = factor(progesterone_status, levels = c("Positive", "Negative")),
     status = factor(status, levels = c("Alive", "Dead"))) |> 
-  dplyr::select(-survival_months, -differentiate, -n_stage, -t_stage, -estrogen_status, -regional_node_examined)
+  dplyr::select(-survival_months, -differentiate, -x6th_stage, -estrogen_status) 
 
 summary(heart_df_log)
 str(heart_df_log)
 ```
 
-### examine interaction 
+<font color = "blue">according to the procedure, I get the final dataset to make a logistic regression. 1,delete 4 level grade data for its anaplastic mode. 2, delete three categorical variables, namely`differentiate`, `x6th_stage`,`estrogen_status`. 3, delete the `survival_months` cause it's not the variable of our interest. 4, I'll attach more importance on the variable `regional_node_examined`, so it will be tested by Wald test to check whether it should be deleted. </font>
+
+### Examine interaction 
 
 ```{r}
 glm_result_1 = glm(data = heart_df_log,
                  status ~ a_stage * reginol_node_positive,
                  binomial(link = 'logit'))
-broom::tidy(glm_result)
+broom::tidy(glm_result_1)
+
+glm_result_2 = glm(data = heart_df_log,
+                 status ~ regional_node_examined * reginol_node_positive,
+                 binomial(link = 'logit'))
+broom::tidy(glm_result_2)
 ```
 
-<font color = "blue">I check all the 2 variable group to find whether there exists a correlation effect, and find a_stage and reginol_node_positive's interaction p-value is 1.37e-4, which means there interaction event play a vital role in our model. </font>
+<font color = "blue">I check all the 2 variable group to find whether there exists a correlation effect, and find `a_stage` and `reginol_node_positive`'s interaction p-value is 1.50e-4. `regional_node_examined` and `reginol_node_positive`'s interaction p-value is 5.71e-5.  Their interaction events play  vital roles in our model. Therefore, I will put these two interaction event in my following models.</font>
 
-# model variable select
+# Model variable select
 
-## 1. stepwise
+## 1. Stepwise
 
 ### build model
 
 ```{r}
 model = 
-  glm(status ~ . + a_stage * reginol_node_positive, 
+  glm(status ~ . + a_stage * reginol_node_positive + regional_node_examined * reginol_node_positive, 
       data = heart_df_log, 
       family = binomial(link = 'logit'))
 
@@ -246,16 +265,20 @@ summary(model)
 model_step = step(model, direction = "both")
 
 summary(model_step)
+
+waldtest(model_step, "regional_node_examined")
 ```
 
-<font color = "blue"> preserve all the variable.</font>
+<font color = "blue"> 1.stepwise: delete the variable `tumor_size`, `regional_node_examined:reginol_node_positive`, `marital_status`2. Wald test shows a p-value 6.467e-07, which demonstrates that we should preserve the variable `regional_node_examined` though it has a different median between two groups stratified by status.</font>
+
+<font color = "red"> Attention here please! In this process, the stepwise help me delete the interaction event `regional_node_examined:reginol_node_positive` but preserve the interaction `a_stage:reginol_node_positive` which means the latter one has a larger influence upon the whole model.</font>
 
 ### the model
 
 ```{r}
 formula1 = 
   as.formula(
-  status ~ age + race + marital_status + x6th_stage + grade + a_stage + tumor_size + progesterone_status + reginol_node_positive + a_stage * reginol_node_positive)
+  status ~ age + race + t_stage + n_stage + grade + a_stage + progesterone_status + regional_node_examined + reginol_node_positive + a_stage:reginol_node_positive)
 
 model = glm(formula1, 
             data = heart_df_log, 
@@ -265,15 +288,17 @@ summary(model)
 check_collinearity(model)
 ```
 
-## random forest
+<font color = "blue"> We find our first model and check its collinearity, the model's performance is good.</font>
+
+## 2. Random forest
 
 ### build model
 
 ```{r}
-library(randomForest)
 set.seed(123)
 model = 
-  randomForest(status~. + a_stage * reginol_node_positive, data = heart_df_log)
+  randomForest(status ~ . + a_stage * reginol_node_positive + regional_node_examined * reginol_node_positive,
+               data = heart_df_log)
 
 summary(model)
 
@@ -282,27 +307,36 @@ plot(model)
 forest_min = which.min(model$err.rate[,1])
 ```
 
+<font color = "blue"> the forest_min which is the best parameter in the regression is 320</font>
+
 ```{r}
 model_forest = 
-  randomForest(status~. + a_stage * reginol_node_positive, 
+  randomForest(status ~ . + a_stage * reginol_node_positive + regional_node_examined * reginol_node_positive, 
                data = heart_df_log, 
                ntree = forest_min, 
                mtry = 4)
 
-model_forest
+knitr::kable(model_forest$confusion)
 ```
+
+<font color = "blue"> in the simulation process, we get a outcome: the model prediction ability towards alive is good ,but when it comes to the dead, the class.error reaches nearly 0.87 which is a large number.</font>
+
 
 ```{r}
 importance(model_forest)
+par(mfrow = c(1, 1), mar = c(4, 4, 2, 1), oma = c(0, 0, 2, 0))
 varImpPlot(model_forest)
+par(mfrow = c(1, 1), mar = c(5, 4, 4, 2) + 0.1, oma = c(0, 0, 0, 0))
 ```
+
+<font color = "blue"> according to the picture, I find the first 5 most important variables have a mean decrease gini over 50, which is significantly larger than other variables, so I use these variables to build my final model.</font>
 
 ### the model
 
 ```{r}
 formula2 = 
   as.formula(
-  status ~ tumor_size + age + reginol_node_positive + marital_status + x6th_stage + grade)
+  status ~ age + regional_node_examined + tumor_size + reginol_node_positive + marital_status)
 
 model = glm(formula2, 
             data = heart_df_log, 
@@ -312,32 +346,35 @@ summary(model)
 check_collinearity(model)
 ```
 
-according to the picture, I find the first 6 most important variables have a mean decrease gini over 50, which is significantly larger than other variables, so I use these variables to build my final model.
+<font color = "blue"> We find our second model and check its collinearity, the model's performance is good.</font>
 
-## LASSO
+## 3. LASSO
 
 ### build model
 
 ```{r}
-x = as.matrix(heart_df_log[,2:9])
+x = as.matrix(heart_df_log[,2:12])
 y = as.matrix(heart_df_log[,1])
-```
-```{r}
+
 model_lasso =
   glmnet(x, y, alpha = 1, family = "binomial")
 
 model_lasso
 ```
-lambda = 0.001546 only 2 predictors were preserved
+
+<font color = "blue"> lambda = 0.000796 only 5 predictors were preserved</font>
+
 
 ```{r}
-plot(lasso, xvar = "lambda", label = TRUE)
+plot(model_lasso, xvar = "lambda", label = TRUE)
 
-lasso.coef = coef(lasso, s = 0.001546)
+lasso.coef = coef(model_lasso, s = 0.000796)
 lasso.coef
 ```
+<font color = "blue">we can get the coeffieients under this situation. (lambda = 0.000796). Now, we want to find the best lamda.</font>
 
 ```{r}
+set.seed(123)
 lambdas = seq(0, 0.5, length.out = 200)
 cv.lasso = 
   cv.glmnet(x, 
@@ -367,31 +404,43 @@ lasso.coef =
 lasso.coef
 ```
 
-### model
+<font color = "blue">according to the outcome, the lasso process help me select these variables: `age`, `grade`, `tumor_size`, `regional_node_examined`, `reginol_node_positive`.</font>
+
+### the model
 
 ```{r}
 formula3 = 
   as.formula(
-  status ~ tumor_size)
+  status ~ age + grade + tumor_size + regional_node_examined + reginol_node_positive)
 
 model = glm(formula3, 
             data = heart_df_log, 
             family = binomial(link = 'logit'))
 
 summary(model)
-# check_collinearity(model)
+check_collinearity(model)
 ```
 
-# nomogram
+<font color = "blue"> We find our third model and check its collinearity, the model's performance is good.</font>
+
+# Diagnosis
+
+```{r}
+fit1 = lrm(formula1, data = heart_df_log, x = T, y = T)
+fit2 = lrm(formula2, data = heart_df_log, x = T, y = T)
+fit3 = lrm(formula3, data = heart_df_log, x = T, y = T)
+```
+
+## Nomogram
 
 ```{r}
 dd = datadist(heart_df_log)
 options(datadist = "dd")
 
-nomogram_plot = function(input){
+nomogram_plot = function(input, number){
   nomo_plot = 
     regplot(input,
-            observation = heart_df_log[1,],
+            observation = heart_df_log[number,],
             center = TRUE,
             title = "Nomogram",
             points = TRUE,
@@ -403,98 +452,186 @@ nomogram_plot = function(input){
 ```
 
 ```{r}
-fit1 = lrm(formula1, data = heart_df_log)
-fit2 = lrm(formula2, data = heart_df_log)
-fit3 = lrm(formula3, data = heart_df_log)
-
-nomogram_plot(fit1)
-nomogram_plot(fit2)
-nomogram_plot(fit3)
+nomogram_plot(fit1, 1)
+nomogram_plot(fit2, 1)
+nomogram_plot(fit3, 1)
 ```
 
-#ROC and AUC
+<font color = "blue"> According to the monogram graph, we can compare three model by random choosing am observation from our dataset. In my code, I choose the first observation. We find that the probability to dead calculated in three models are 7.6%, 6.3% and 11.8%, the truth is that this persion is alive, so the model 2 has the best simulation effect.</font>
+
+## Calibration curve
 
 ```{r}
-fit1 = lrm(formula1, 
-           data = heart_df_log,
-           x = T,
-           y = T)
+cali_plot = function(input){
+  cal = calibrate(input, method = "boot", B = 500)
 
-# AUC
-cal_auc = function(input){
-  heart_df_log$predvalue1 = predict(input)
-  ROC = roc(heart_df_log$status, 
-            heart_df_log$predvalue1)
-  round(auc(ROC),3)
-  round(ci(auc(ROC)),3)
-
-  plot(1 - ROC$specificities,
-       ROC$sensitivities,
-       type = "l",
-       col = "red",
-       lty = 1,
-       xlab = "FP",
-       ylab = "TP",
-       lwd = 2,
-       axes = TRUE,
-       xlim = c(0, 1))
-  abline(0,1)
+  plot(cal,
+       xlim = c(0,1),
+       xlab = "Predicted Probability",
+       ylab = "Observed Probability",
+       legend = FALSE,
+       subtitles = TRUE)
+  abline(0,1,col = "black", 
+         lty = 2, 
+         lwd = 2)
+  lines(cal[,c("predy", "calibrated.orig")], 
+        type = "l",
+        lwd = 2,
+        col = "red",
+        pch = 16)
+  lines(cal[,c("predy", "calibrated.corrected")], 
+        type = "l",
+        lwd = 2,
+        col = "green",
+        pch = 16)
   legend(0.55, 0.35,
-        c(input),
-        lty = c(1),
-        lwd = c(2),
-        col = c("red"),
-        bty = "n")
+         c("Apparent", "Ideal", "Bias-corrected"),
+         lty = c(2, 1, 1),
+         lwd = c(2, 1, 1),
+         col = c("black", "red", "green"),
+         bty = "n")
 }
-
-cal_auc(fit1) + cal_auc(fit2) + cal_auc(fit3)
 ```
 
-# 拟合优度检验H-L
+```{r}
+cali_plot(fit1)
+cali_plot(fit2)
+cali_plot(fit3)
+```
+
+<font color = "blue"> According to the calibration, all of three models have a good performance. Their calibration curves  closely follow the diagonal line (45-degree line).</font>
+
+## Hosmer and Lemeshow Goodness-of-Fit Test
 
 ```{r}
-# fit1 = glm(formula1, 
-#            data = heart_df_log,
-#            family = binomial(link = logit))
+fit1 = glm(formula1,
+           data = heart_df_log,
+           family = binomial(link = logit))
+fit2 = glm(formula2,
+           data = heart_df_log,
+           family = binomial(link = logit))
+fit3 = glm(formula3,
+           data = heart_df_log,
+           family = binomial(link = logit))
+
 hl1 = hoslem.test(fit1$y, fitted(fit1), g = 10)
 hl2 = hoslem.test(fit2$y, fitted(fit2), g = 10)
+hl3 = hoslem.test(fit3$y, fitted(fit3), g = 10)
 
-hl1
-## X-squared = 8.8156, df = 8, p-value = 0.3581
+hl1$p.value
+hl2$p.value
+hl3$p.value
 ```
 
-# validation(标准化数据怎么弄)
+<font color = "blue"> according to the outcome, we can find that all of three model's p-value are bigger than 5% which means they all have a good simulation performance. However, the model3 is the best and the model2 is the worst.</font>
+
+# Validation
 
 ```{r}
-train = 
-  trainControl(method = "cv", number = 5)
+cro_validation = function(input, num){
+  train = 
+  trainControl(method = "cv", number = num)
 
 model_caret = 
-  train(status ~ tumor_size + reginol_node_positive,
-                   data = heart_df_log,
-                   trControl = train,
-                   method = "glm",
-                   na.action = na.pass)
-
-model_caret$finalModel
-print(model_caret)
-
-model_caret_2 = 
-  train(formula1,
+  train(input,
         data = heart_df_log,
         trControl = train,
         method = "glm",
         na.action = na.pass)
 
-model_caret_2$finalModel
-print(model_caret_2)
+model_caret$finalModel
+print(model_caret)
+}
 ```
 
+```{r}
+set.seed(123)
+result1 = cro_validation(formula1, 5)
+result2 = cro_validation(formula2, 5)
+result3 = cro_validation(formula3, 5)
 
-# form
-h1
+result_tb = 
+  tibble(model = c("model1", "model2", "model3"),
+         cro_val_accuracy = c(result1[1,1], result2[1,1], result3[1,1]),
+         cro_val_kappa = c(result1[1,2], result2[1,2], result3[1,2]))
 
+knitr::kable(result_tb)
+```
 
-# interpretation
-log(p/(1-p))= 
+<font color = "blue">To test the probability to predict a new observation, I use the method cross-validation with 5 folds. We can find no matter from a accuracy perspective or a kappa perspective, the model 1 is the best among these three models. </font>
 
+# Conclusion
+
+```{r}
+result_tb = 
+  result_tb |> 
+  mutate(
+    nomo_plot = c("7.6%", "6.3%", "11.8%"),
+    hl_pvalue = c(hl1$p.value, hl2$p.value, hl3$p.value)
+  )
+
+knitr::kable(result_tb)
+```
+<font color = "blue">According to the outcome form, I will choose the model1 as my final model. Though it has a worse performance in monogram plot procedure, It performs perfectly in other procedures. </font>
+
+# Interpretation
+
+```{r}
+coef_model = coef(fit1)
+```
+
+$$
+log(\dfrac{p}{1-p}) = `r coef_model[1]` + `r coef_model[2]` * age + `r coef_model[3]` * I(raceBlack) + `r coef_model[4]` * I(raceOther) + `r coef_model[5]` * I(t_stageT2) + `r coef_model[6]` * I(t_stageT3) + `r coef_model[7]` * I(t_stageT4) + `r coef_model[8]` * I(n_stageN2) + `r coef_model[9]` * I(n_stageN3) + `r coef_model[10]` * I(grade2) + `r coef_model[11]` * I(grade1) + `r coef_model[12]` * I(a_stageDistant) + `r coef_model[13]` * I(progesterone_statusNegative) + `r coef_model[14]` * regional_node_examined + `r coef_model[15]` * regional_node_positive + `r coef_model[16]` * I(a_stageDistant)*reginol_node_positive
+$$
+<font color = "blue">1, continuous: controlling other conditions unchanged, increasing by one year in age is associated with a 0.02186205-fold increase in the risk of death. 2, categorical variable: All other conditions being constant, the probability of death for Black individuals is 0.58 times higher than that for White individuals. 3, interaction: if two observations are each in a distant a_stage and a regional a_stage, then one unit increase in regional node positive will make a distant one 0.6762288 more times probability to die.
+</font>
+
+# Check model's effect with data stratified by race
+
+```{r}
+par(mfrow = c(2, 2), mar = c(5, 4, 4, 2) + 0.1)
+# residual vs fitted plot
+plot(fit1, which = 1)
+
+# QQ plot
+plot(fit1, which = 2)
+
+plot(fit1, which = 3)
+plot(fit1, which = 4)
+```
+
+```{r}
+heart_df_white = 
+  heart_df_log |> 
+  filter(race == "White")
+
+heart_df_other = 
+  heart_df_log |> 
+  filter(!race == "White")
+```
+
+```{r}
+cal_predict_value = function(input, data){
+  
+  predicted_values = 
+    predict(input, 
+            newdata = data, 
+            type = "response")
+
+    predicted_classes = 
+      ifelse(predicted_values > 0.5, "Dead", "Alive")
+
+    
+    accuracy = 
+      sum(predicted_classes == data$status) / length(data$status)
+    
+    return(accuracy)
+}
+```
+
+```{r}
+cal_predict_value(fit1, heart_df_white)
+cal_predict_value(fit1, heart_df_other)
+```
+
+<font color = "blue">According to the outcome here, we can find that the model's prediction accuracy is 0.836 to the white people and 0.836 to the other race people. There has a difference between two groups, but the degree is small which is just 3% and we can tolerate it. I f we want to make a more accurate modification towards this shortcoming, we can just separate our original dataset and get two different model in different race condition. </font>

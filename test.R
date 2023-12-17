@@ -1,3 +1,38 @@
+```{r}
+heart_df = 
+  read_csv("./Project_2_data.csv") |> 
+  janitor::clean_names() |> 
+  relocate(survival_months, status) |> 
+  mutate(
+    race = as.numeric(factor(race, levels = c("White", "Black", "Other"))),
+    marital_status = as.numeric(factor(marital_status, levels = c("Married", "Divorced", "Single", "Widowed", "Separated"))),
+    t_stage = as.numeric(factor(t_stage, levels = c("T1", "T2", "T3", "T4"))),
+    n_stage = as.numeric(factor(n_stage, levels = c("N1", "N2", "N3"))),
+    x6th_stage = as.numeric(factor(x6th_stage, levels = c("IIA", "IIIA", "IIIC", "IIB", "IIIB"))),
+    differentiate = as.numeric(factor(differentiate, levels = c("Poorly differentiated", "Moderately differentiated", "Well differentiated", "Undifferentiated"))),
+    grade = as.numeric(factor(grade, levels = c("3", "2", "1", "anaplastic; Grade IV"))),
+    a_stage = as.numeric(factor(a_stage, levels = c("Regional", "Distant"))),
+    estrogen_status = as.numeric(factor(estrogen_status, levels = c("Positive", "Negative"))),
+    progesterone_status = as.numeric(factor(progesterone_status, levels = c("Positive", "Negative"))),
+    status = as.numeric(factor(status, levels = c("Alive", "Dead")))
+  ) |> 
+  rename(ms = "marital_status", 
+         t_s = "t_stage",
+         n_s = "n_stage",
+         x6_s = "x6th_stage",
+         a_s = "a_stage",
+         diff = "differentiate",
+         est = "estrogen_status",
+         pro = "progesterone_status",
+         rne = "regional_node_examined",
+         rnp = "reginol_node_positive"
+  )
+
+variablesummary = 
+  lapply(heart_df[,3:16], table)
+```
+
+
 ### transform 
 
 ```{r}
@@ -138,4 +173,46 @@ heart_df_log =
 
 summary(heart_df_log)
 str(heart_df_log)
+```
+
+## ROC curve and AUC value
+
+```{r}
+# AUC
+cal_auc = function(input){
+  heart_df_log$predvalue1 = predict(input)
+  ROC = roc(heart_df_log$status, 
+            heart_df_log$predvalue1)
+  round(auc(ROC),3)
+  round(ci(auc(ROC)),3)
+  
+  plot(1 - ROC$specificities,
+       ROC$sensitivities,
+       type = "l",
+       col = "red",
+       lty = 1,
+       xlab = "FP",
+       ylab = "TP",
+       lwd = 2,
+       axes = TRUE,
+       xlim = c(0, 1))
+  abline(0,1)
+  legend(0.55, 0.35,
+         c(input),
+         lty = c(1),
+         lwd = c(2),
+         col = c("red"),
+         bty = "n")
+}
+```
+
+```{r}
+combined_plot_2 = 
+  plot_grid(cal_auc(fit1),
+            cal_auc(fit2),
+            cal_auc(fit3), 
+            ncol = 2,
+            nrow = 2)
+
+combined_plot_2
 ```
