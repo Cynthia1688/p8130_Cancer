@@ -583,6 +583,7 @@ coef_model = coef(fit1)
 $$
 log(\dfrac{p}{1-p}) = `r coef_model[1]` + `r coef_model[2]` * age + `r coef_model[3]` * I(raceBlack) + `r coef_model[4]` * I(raceOther) + `r coef_model[5]` * I(t_stageT2) + `r coef_model[6]` * I(t_stageT3) + `r coef_model[7]` * I(t_stageT4) + `r coef_model[8]` * I(n_stageN2) + `r coef_model[9]` * I(n_stageN3) + `r coef_model[10]` * I(grade2) + `r coef_model[11]` * I(grade1) + `r coef_model[12]` * I(a_stageDistant) + `r coef_model[13]` * I(progesterone_statusNegative) + `r coef_model[14]` * regional_node_examined + `r coef_model[15]` * regional_node_positive + `r coef_model[16]` * I(a_stageDistant)*reginol_node_positive
 $$
+
 <font color = "blue">1, continuous: controlling other conditions unchanged, increasing by one year in age is associated with a 0.02186205-fold increase in the risk of death. 2, categorical variable: All other conditions being constant, the probability of death for Black individuals is 0.58 times higher than that for White individuals. 3, interaction: if two observations are each in a distant a_stage and a regional a_stage, then one unit increase in regional node positive will make a distant one 0.6762288 more times probability to die.
 </font>
 
