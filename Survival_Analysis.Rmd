@@ -103,7 +103,7 @@ theme_set(theme_minimal() + theme(legend.position = "bottom"))
 **Methods**
 
 _1. Data Description_
-```{r}
+```{r message=FALSE, echo=FALSE}
 cancer_df = 
   read_csv("Project_2_data.csv") |> 
   janitor::clean_names() |> 
@@ -132,7 +132,7 @@ The numeric descriptive statistics are:
 `r cancer_df |> select_if(is.numeric) |> summary() |> knitr::kable(digits = 3)`
 
 
-```{r}
+```{r message=FALSE, echo=FALSE}
 age_plt = 
   cancer_df |> 
   ggplot(aes(x = tumor_size)) +
@@ -190,7 +190,7 @@ gridExtra::grid.arrange(
 
 Comparing all numeric variables distribution, we have decided to conduct log-transform on `reginol_node_positive` variable:
 
-```{r}
+```{r message=FALSE, echo=FALSE}
 org_reg_plt = 
   cancer_df |> 
   ggplot(aes(x = reginol_node_positive)) +
@@ -213,6 +213,83 @@ gridExtra::grid.arrange(org_reg_plt, log_reg_plt, nrow = 1)
 
 Comparing plots before and after log-transformation, we decided to  abandoned log-transform on `reginol_node_positive` variable and adopt other methods to analyze.
 
+# Methods
+
+The Kaplan-Meier estimator stands as one of the most extensively employed techniques for approximating survival functions in datasets featuring non-informative right censoring. It is utilized to perform univariate analysis on the impact of population groups within predictor variables on survival time. Also referred to as the product-limit estimator, the Kaplan-Meier method is non-parametric, eliminating the need to specify a distribution for survival time. Calculated as a point estimate for survival time at each recorded event time (such as each death in this context), the Kaplan-Meier estimator reflects the conditional probability of surviving at that particular time, and is written as
+
+$$
+\hat{S}(t_i) = 1 - \frac{d_i}{n_i}
+$$
+
+where
+
+- $\hat{S}$ is the estimated survival probability,
+- $t_i$ is the event time,
+- $n_i$ is the number of individuals alive (at risk) right before $t_i$,
+- $d_i$ is the number of deaths at $t_i$.
+The cumulative Kaplan-Meier estimator for the survival function S(t) at all recorded event times in the data is the product of all $\hat{S}$ point estimates (Liu, 2012)
+$$
+S(t) = \prod_{i=1}^{j} \left(1 - \frac{d_i}{n_i}\right)
+$$
+
+where
+
+- \( j \) is the total number of recorded events,
+- \( d_i \) is the number of deaths at time \( t_i \),
+- \( n_i \) is the number of individuals at risk just before time \( t_i \).
+
+The computation of the Kaplan-Meier estimator is constrained to instances of recorded event times, excluding consideration of censoring times. However, the impact of censoring on outcomes remains salient, as individuals subject to censorship are removed from the cohort of individuals extant immediately prior to a designated event time 
+$t_i$. Within Kaplan-Meier plots, alterations in the survival curve manifest exclusively at event times, with censoring times demarcated by tick marks along the survival curve.
+
+To discern differentials in survival time contingent upon predictor variables, these variables are categorized into discrete population groups. Binary variables facilely lend themselves to dichotomous classification, characterized by values of 0 or 1. The Kaplan-Meier estimator is then applied to compute the survival function for each categorical group. Conversely, continuous variables are stratified into four populations, aligning with respective quartiles of the dataset. Kaplan-Meier plots serve as a visual apparatus to elucidate distinctions in survival functions among variable populations and to pinpoint potential non-proportionalities within survival curves.
+
+Non-weighted log-rank tests are invoked to identify statistically significant disparities between Kaplan-Meier survival functions. This methodology, being non-parametric, circumvents reliance on the precise temporal occurrences of events, emphasizing instead the ordinal sequencing of events. The assignment of ranks is contingent upon the chronological sequence of events, with the initial recorded death accorded a rank of 1, followed sequentially by subsequent mortalities. It is imperative to underscore that log-rank tests are unsuitable for deployment within a multivariate milieu, their utility being confined to the comparison of disparities within specified populations—either binary or quartile groupings—pertaining to each variable.
+
+In the context of the log-rank test for comparing two survival functions, the null hypothesis posits equivalence between the survival function of the first group and that of the second group. Conversely, the alternative hypothesis posits statistical non-equivalence in the survival functions. This comparative analysis is denoted as the two-sample log-rank test.
+$$
+H_0 : S(t_1) = S(t_2)
+$$
+$$
+H_A : S(t_1) \neq S(t_2)
+$$
+The null hypothesis for log rank tests of more than two survival curves is that every survival curve in the test is equal. The alternative hypothesis is that at least one of the survival curves is different. The log-rank test does not specify which curve is the different one. Hypotheses for continuous variables, grouped into four quartiles, have four survival survival functions to test, and will be labeled as the four sample log-rank test (LaMorte, 2016)
+$$
+H_0 : S(t_1) = S(t_2) = S(t_3) = S(t_4)
+$$
+
+$$
+H_A : \text{At least one survival function } S(t_i) \text{ is not equal to the other survival functions}
+$$
+To calculate the log rank test, the number of observed events is the sum of all events recorded at each time t (LaMorte, 2016). The number of expected events is defined as
+
+$$
+E_{jt} = N_{jt} * \frac{O_t}{N_t}
+$$
+
+where
+
+- \( E_{jt} \) = Expected number of events at time \( t \) in sample \( j \)
+- \( N_{jt} \) = Number of people at risk right before time \( t \) in sample \( j \)
+- \( O_t \) = Number of Observed events across all samples
+- \( N_t \) = Number of people at risk right before time \( t \) across all samples.
+
+The log rank test statistic is calculated as a summation of the difference between the number observed events and expected events at each time interval, for each sample (LaMorte, 2016).
+$$
+\chi^2 = \sum \left( \frac{(\sum O_{jt} - \sum E_{jt})^2}{\sum E_{jt}} \right)
+$$
+
+where
+
+- \( \chi^2 \) is the log-rank test statistic on a chi-square distribution
+- \( O_{jt} \) is the number of observed events for the \( j \)th group over time
+- \( E_{jt} \) is the number of expected events for the \( j \)th group over time
+
+The log-rank test statistic follows a chi-square distribution on \( k-1 \) degrees of freedom, where \( k \) is the number of groups. A two-sample log-rank test will have 1 degree of freedom (\( k=2 \)), and a four-sample log-rank test will have 3 degrees of freedom (\( k=4 \)). The significance, or p-value of the test can be found in a table of Critical Values or through calculation in R using the `pchisq()` function. For this analysis, a significance level of \( \alpha = 0.05 \) is used to determine test significance. P-values greater than 0.05 fail to reject the null hypothesis \( H_0 \), and p-values less than 0.05 reject the null hypothesis in favor of the alternative hypothesis. In this report, p-values calculated with log rank test are displayed on the Kaplan-Meier plots for each significant variable in the Results section, and for all other variables in Appendix A. Log-rank test significance will help determine which variables should be included in a multivariate model, and indicate which variables are significant to survival time in a univariate setting.
+
+Log-rank tests were non-weighted because there is no evidence in the data description that survival differences are more meaningful if they occur closer to the beginning of the study, or closer to the end.
+
+
+ 
 # Results
 
 ## Univariate Analysis
@@ -326,25 +403,6 @@ KMplots_examined <- ggsurvplot(fit = KM_regional_examined, data = cancer_df, con
 ```
 
 Kaplan-Meier plots of each variable with a significant log rank test result. Non-significant Kaplan-Meier plots can be found in Appendix A.
-```{r message=FALSE}
-KMplots_age
-KMplots_tumor
-```
-**Figure 2.** Kaplan-Meier survival curves for blood pressure binary variable (left), and age variable (right). The survival time for individuals with high blood pressure is significantly different from individuals with normal blood pressure. Survival time for individuals aged 70 appears significantly different than all other age groups. P-values for log rank tests do not specify which group(s) are significantly different, however plots can be used to discern visual differences.
-
-```{r message=FALSE}
-# KMplots_positive
-# KMplots_race
-# KMplots_marital
-# KMplots_t_stage
-# KMplots_n_stage
-# KMplots_6_stage
-# KMplots_diff
-# KMplots_grade
-# KMplots_a_stage
-# KMplots_estrogen
-# KMplots_progesterone
-```
 
 # Model Interpretation and Discussion
 
@@ -355,7 +413,7 @@ KMplots_tumor
 # Appendix A:
 
 Exploratory Analysis, Correlation Coefficient Plot, Kaplan-Meier plots with log rank test.
-```{r}
+```{r message=FALSE, echo=FALSE}
 #load relevant packages
 library(survminer)
 library(survival)
@@ -390,7 +448,7 @@ cancer_df =
   )
 ```
 
-```{r}
+```{r message=FALSE, echo=FALSE}
 #correlation plot
 res.cor <- correlate(cancer_df[,1:14])
 cancer_cor <- res.cor %>% stretch()
@@ -410,7 +468,7 @@ cancer_cor %>%
         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
-```{r}
+```{r message=FALSE, echo=FALSE}
 #divide continuous variables into quartiles
 cancer_df = 
   cancer_df |> 
@@ -422,7 +480,7 @@ cancer_df =
   )
 ```
 
-```{r}
+```{r message=FALSE, echo=FALSE}
 #Kaplan-Meier estimators for significant variables. Plots found in Results section
 KM_age <- survfit(Surv(survival_months, status)~agequant, data = cancer_df)
 KM_tumor_size <- survfit(Surv(survival_months, status)~tumor_size_quant, data = cancer_df)
@@ -438,34 +496,77 @@ KM_a_stage = survfit(Surv(survival_months, status)~a_stage, data = cancer_df)
 KM_estrogen = survfit(Surv(survival_months, status)~estrogen_status, data = cancer_df)
 KM_progesterone = survfit(Surv(survival_months, status)~progesterone_status, data = cancer_df)
 
+KMplots_progesterone <- ggsurvplot(fit = KM_progesterone, data = cancer_df, conf.int = F, title = "Progesterone Status", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Negative", "Positive"), legend.title = "", palette = c("#2903e8", "#c7000d"), ggtheme = theme_bw())
+
+
 KMplots_age<- ggsurvplot(fit = KM_age, data = cancer_df, conf.int = F, title = "Age", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("30-47", "54-61", "47-54", "61-69"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
 
+
+gridExtra::grid.arrange(KMplots_progesterone$plot, KMplots_age$plot, nrow = 1)
+```
+
+**Figure 2.** Kaplan-Meier survival curves for progesterone binary variable (left), and age variable (right). The survival time for individuals with positive progesterone is significantly different from individuals with negative progesterone. Survival time for individuals aged 61-69 appears significantly different than all other age groups. P-values for log rank tests do not specify which group(s) are significantly different, however plots can be used to discern visual differences.
+
+```{r message=FALSE, echo=FALSE}
 KMplots_tumor <- ggsurvplot(fit = KM_tumor_size, data = cancer_df, conf.int = F, title = "Tumor Size (mm)", ylab = "Survival Probability", xlab = "Months", pval = T, legend.labs = c("1-16mm", "17-25mm", "26-38mm", "39-140mm%"), legend.title ="", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
 
 KMplots_positive <- ggsurvplot(fit = KM_reginol_positive, data = cancer_df, conf.int = F, title = "Reginol Node Positive", ylab = "Survival Probability", xlab = "Months", pval = T, legend.labs = c("1", "2", "3-5", "6-46"), legend.title ="", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
 
+gridExtra::grid.arrange(KMplots_tumor$plot, KMplots_positive$plot, nrow = 1)
+```
+
+**Figure 3**. Kaplan-Meier survival curves for tumor size (left) and reginol node positive (right). The survival time for individuals with tumor size larger than 39mm appear significantly different from all other groups. The group with the smallest tumor size 1-16mm has the highest survival probability of the four groups over time. Reginol node positive, measured in number, appears to have multiple significant differences between groups. The group with one node has the highest survival percentage over time, and the group with the highest positive node number $(= 6 - 46)$ has the lowest survival percentage over time.
+
+```{r message=FALSE, echo=FALSE}
 KMplots_race<- ggsurvplot(fit = KM_race, data = cancer_df, conf.int = F, title = "Race", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Black", "Other", "White" ), legend.title = "", palette = c("#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
+
 
 KMplots_marital<- ggsurvplot(fit = KM_marital, data = cancer_df, conf.int = F, title = "Marital Status", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Divorced", "Married", "Separated", "Single", "Widowed"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d", "#006400"), ggtheme = theme_bw())
 
+gridExtra::grid.arrange(KMplots_race$plot, KMplots_marital$plot, nrow = 1)
+```
+
+**Figure 4**. Kaplan-Meier survival curves for race (left) and Marital Status (right). The survival time for the Black appears significantly lower than all other race groups. The other race have the highest survival probability of the three groups over time. Marital status appears to have multiple significant differences between groups. The seperated group has the lowest survival percentage over time, and the married group with the highest survival percentage over time.
+
+```{r message=FALSE, echo=FALSE}
 KMplots_t_stage<- ggsurvplot(fit = KM_t_stage, data = cancer_df, conf.int = F, title = "T Stage: Adjusted AJCC 6th T", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("T1", "T2", "T3", "T4" ), legend.title = "", palette = c("#006400", "#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
 
 KMplots_n_stage<- ggsurvplot(fit = KM_n_stage, data = cancer_df, conf.int = F, title = "N Stage: Adjusted AJCC 6th N", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("N1", "N2", "N3" ), legend.title = "", palette = c("#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
 
+gridExtra::grid.arrange(KMplots_t_stage$plot, KMplots_n_stage$plot, nrow = 1)
+```
+
+**Figure 5.** Kaplan-Meier survival curves for T Stage (left) and N Stage (right). The survival time for individuals with Adjusted AJCC 6th T appear significantly different from all other groups. The group with T1 stage has the highest survival probability of the four groups over time. N Stage, Adjusted AJCC 6th N, appears to have multiple significant differences between groups. The group with the N1 stage has the highest survival percentage over time, and the group with the N3 stage has the lowest survival percentage over time.
+
+```{r message=FALSE, echo=FALSE}
 KMplots_6_stage<- ggsurvplot(fit = KM_6_stage, data = cancer_df, conf.int = F, title = "6th Stage: Breast Adjusted AJCC 6th Stage", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Moderately differentiated", "Married", "Separated", "Single", "Widowed"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d", "#006400"), ggtheme = theme_bw())
 
 KMplots_diff<- ggsurvplot(fit = KM_diff, data = cancer_df, conf.int = F, title = "Differentiate", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Moderately", "Poorly", "Undifferentiated", "Well"), legend.title = "", palette = c("#8702e0", "#2903e8", "#c7000d", "#006400"), ggtheme = theme_bw())
 
+gridExtra::grid.arrange(KMplots_6_stage$plot, KMplots_diff$plot, nrow = 1)
+```
+
+**Figure 6.** Kaplan-Meier survival curves for multiple levels variable Breast Adjusted AJCC 6th Stage (left), and Differentiate (right). The survival time for widows is significantly different from married individuals. Survival time for undifferentiated individuals appears significantly different than all other differentiate groups. P-values for log rank tests do not specify which group(s) are significantly different, however plots can be used to discern visual differences.
+
+```{r message=FALSE, echo=FALSE}
 KMplots_grade<- ggsurvplot(fit = KM_grade, data = cancer_df, conf.int = F, title = "Grade", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("1", "2", "3", "4 (anaplastic)"), legend.title = "", palette = c("#8702e0", "#2903e8", "#c7000d", "#006400"), ggtheme = theme_bw())
+
 
 KMplots_a_stage<- ggsurvplot(fit = KM_a_stage, data = cancer_df, conf.int = F, title = "A Stage", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Distant", "Regional"), legend.title = "", palette = c("#2903e8", "#c7000d"), ggtheme = theme_bw())
 
-KMplots_estrogen <- ggsurvplot(fit = KM_estrogen, data = cancer_df, conf.int = F, title = "Estrogen Status", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Negative", "Positive"), legend.title = "", palette = c("#2903e8", "#c7000d"), ggtheme = theme_bw())
-
-KMplots_progesterone <- ggsurvplot(fit = KM_progesterone, data = cancer_df, conf.int = F, title = "Progesterone Status", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Negative", "Positive"), legend.title = "", palette = c("#2903e8", "#c7000d"), ggtheme = theme_bw())
+gridExtra::grid.arrange(KMplots_grade$plot, KMplots_a_stage$plot, nrow = 1)
 ```
 
-```{r}
+**Figure 7.** Kaplan-Meier survival curves for grade (left) and a stage (right). The survival time for individuals with grade 4 (anaplastic) appear significantly different from all other groups. The group with the highest grade 1 does have the highest survival probability of the four groups over time. A Stage, measured in binary level, appears to have two significant differences between groups. The group with the regional stage has the highest survival percentage over time, and the group with the distant stage has the lowest survival percentage over time.
+
+```{r message=FALSE, echo=FALSE}
+KMplots_estrogen <- ggsurvplot(fit = KM_estrogen, data = cancer_df, conf.int = F, title = "Estrogen Status", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Negative", "Positive"), legend.title = "", palette = c("#2903e8", "#c7000d"), ggtheme = theme_bw())
+KMplots_estrogen
+```
+
+**Figure 8**. Kaplan-Meier survival curves of each Estrogen Status group. The survival time for individuals with negative Estrogen Status appears significantly different, and less than positive groups.
+
+```{r message=FALSE, echo=FALSE}
 #Kaplain-Meier estimators and plots for non-significant variables
 KM_regional_examined <- survfit(Surv(survival_months, status)~regional_examined_quant, data = cancer_df)
 
