@@ -30,6 +30,7 @@ library(caret)
 library(ResourceSelection)
 library(MASS)
 library(cowplot)
+library(pROC)
 ```
 
 # clean the data
@@ -72,18 +73,13 @@ variablesummary =
 2. predictors: 4 continuous; 10 categorical</font>
 
 
-
 # examine predictors 
 
-```{r}
-# Boxplots for each continuous variable
-par(mfrow=c(2,3))
-boxplot(heart_df$survival_months, main='survival_months')
-boxplot(heart_df$age, main='age')
-boxplot(heart_df$tumor_size, main='tumor_size')
-boxplot(heart_df$rne, main='rne')
-boxplot(heart_df$rnp, main='rnp')
+## for categorical variable
 
+### graphic plot
+
+```{r}
 # Histograms for each categorical variables
 par(mfrow=c(1,2))
 hist(heart_df$status, main='status')
@@ -93,62 +89,22 @@ hist(heart_df$t_s, main='t_s')
 hist(heart_df$n_s, main='n_s')
 hist(heart_df$x6_s, main='x6_s')
 hist(heart_df$a_s, main='a_s')
+hist(heart_df$diff, main='diff')
 hist(heart_df$grade, main='grade')
 hist(heart_df$est, main='est')
 hist(heart_df$est, main='pro')
-
 ```
 
 <font color = "blue">1, tumor, rne, rnp significant right-skewed. 2, some categorical variable has powerful correlation.</font>
 
-# transform by boxcox
-
-```{r}
-# density for continuous variables
-
-# heart_df |> 
-#   mutate(lnsurvival = log(rnp)) |> 
-#   ggplot(aes(x = survival_months))+geom_density()
-p1 =ggplot(heart_df, aes(x = survival_months)) + geom_density()
-p2 = ggplot(heart_df, aes(x = age)) + geom_density()
-p3 = ggplot(heart_df, aes(x = tumor_size)) + geom_density()
-p4 = ggplot(heart_df, aes(x = rne)) + geom_density()
-p5 = ggplot(heart_df, aes(x = rnp)) + geom_density()
-
-combined_plot = plot_grid(p1, p2, p3, p4, p5, 
-                           ncol = 3,
-                           nrow = 2)
-combined_plot
-```
-
-```{r}
-transformed_data = boxcox(heart_df$)$x
-lambda_value <- boxcox(original_data + 1)$lambda
-```
-
-
-# examie interaction 
-
-## correlation
-
-```{r}
-par()
-cor(heart_df[,3:16])
-corrplot(cor(heart_df[,3:16]), type = "upper", diag = FALSE, mar = c(0, 0, 0, 0))
-par(mfrow = c(1, 1), mar = c(5, 4, 4, 2) + 0.1)
-```
-
-<font color = "blue">diff & grade, n_s & rnp, t_s & tumor_size, t_s & x6_s, est & pro have the strongest correlation, particularly, difference and grade should preserve one</font>
-
-
-## char-squared
+### char-squared
 
 ```{r}
 heart_df_2 = 
-  read_csv("../hw/data_file/Project_2_data.csv") |> 
+  read_csv("./Project_2_data.csv") |> 
   janitor::clean_names() |> 
   relocate(survival_months, status) |> 
-  dplyr::select("race", "marital_status", "t_stage", "n_stage", "x6th_stage", "grade", "a_stage", "estrogen_status", "progesterone_status") |> 
+  dplyr::select("race", "marital_status", "t_stage", "n_stage", "x6th_stage", "differentiate", "grade", "a_stage", "estrogen_status", "progesterone_status") |> 
   mutate_all(as.factor)
 
 result_table = 
@@ -190,223 +146,199 @@ result_table =
 result_table
 ```
 
-## one-way anova
+<font color = "blue">particularly, difference and grade should preserve one. delete `differentiate`. What's more, delete `n_stage`, `est`, `t_stage`</font>
+
+## for continuous variable
+
+### graphic plot
 
 ```{r}
-set.seed(123)
-
-heart_df_3 = 
-  read_csv("../hw/data_file/Project_2_data.csv") |> 
-  janitor::clean_names() |> 
-  relocate(survival_months, status) |> 
-  dplyr::select("status", "age", "tumor_size", "regional_node_examined", "reginol_node_positive")
-
-
-anova_results = list()
-
-for(i in 2:ncol(heart_df_3)){
-  formula_obj <- as.formula(paste(names(heart_df_3)[i], "~ status", sep = ""))
-  anova_result <- aov(formula_obj, data = heart_df_3)
-  
-  p_value = summary(anova_result)[[1]]["Pr(>F)"]["status",]
- 
-  anova_results[[i - 1]] <- p_value
-}
-
-anova_tb = 
-  tibble(
-    variale = c("age", "tumor_size", "regional_node_examined", "reginol_node_positive"),
-    p_value = anova_results
-  ) |> 
-  unnest(p_value)
-
-anova_tb
-heart_df_log |> 
-  count(grade)
+# Boxplots for each continuous variable
+par(mfrow=c(2,3))
+boxplot(heart_df$survival_months, main='survival_months')
+boxplot(heart_df$age, main='age')
+boxplot(heart_df$tumor_size, main='tumor_size')
+boxplot(heart_df$rne, main='rne')
+boxplot(heart_df$rnp, main='rnp')
 ```
 
-# model select
+```{r}
+p1 =ggplot(heart_df, aes(x = survival_months)) + geom_density()
+p2 = ggplot(heart_df, aes(x = age)) + geom_density()
+p3 = ggplot(heart_df, aes(x = tumor_size)) + geom_density()
+p4 = ggplot(heart_df, aes(x = rne)) + geom_density()
+p5 = ggplot(heart_df, aes(x = rnp)) + geom_density()
 
-## check the data
+combined_plot = plot_grid(p1, p2, p3, p4, p5, 
+                           ncol = 3,
+                           nrow = 2)
+combined_plot
+```
+
+### Rank-sum test and t-test
+
+```{r}
+result1 = t.test(age ~ status, data = heart_df)
+result2 = wilcox.test(tumor_size ~ status, data = heart_df)
+result3 = wilcox.test(rne ~ status, data = heart_df)
+result4 = wilcox.test(rnp ~ status, data = heart_df)
+```
+
+<font color = "blue">delete `rne`</font>
+
+## correlation for remaining variables 
+
+```{r}
+par(mfrow = c(1, 1), mar = c(5, 4, 4, 2) + 0.1)
+cor_cate = cor(heart_df[,c(2, 3:5, 8, 10:12, 14, 16)])
+
+corrplot(cor_cate, type = "upper", diag = FALSE, mar = c(0, 0, 0, 0))
+```
+
+<font color = "blue"> There is no apparent linear correlation among variables </font>
+
+## check the dataset again
 
 ```{r}
 heart_df_log = 
-  read_csv("../hw/data_file/Project_2_data.csv") |> 
+  read_csv("./Project_2_data.csv") |> 
   janitor::clean_names() |> 
   relocate(survival_months, status) |> 
   mutate(
     race = factor(race, levels = c("White", "Black", "Other")),
     marital_status = factor(marital_status, levels = c("Married", "Divorced", "Single", "Widowed", "Separated")),
-    t_stage = factor(t_stage, levels = c("T1", "T2", "T3", "T4")),
-    n_stage = factor(n_stage, levels = c("N1", "N2", "N3")),
     x6th_stage = factor(x6th_stage, levels = c("IIA", "IIIA", "IIIC", "IIB", "IIIB")),
-    differentiate = factor(differentiate, levels = c("Poorly differentiated", "Moderately differentiated", "Well differentiated", "Undifferentiated")),
     grade = factor(grade, levels = c("3", "2", "1", "anaplastic; Grade IV")),
     a_stage = factor(a_stage, levels = c("Regional", "Distant")),
-    estrogen_status = factor(estrogen_status, levels = c("Positive", "Negative")),
     progesterone_status = factor(progesterone_status, levels = c("Positive", "Negative")),
     status = factor(status, levels = c("Alive", "Dead"))) |> 
-  # mutate(
-  #   status = ifelse(status == "Alive", 1, 0),
-  #   a_stage = ifelse(a_stage == "Regional", 1, 0),
-  #   estrogen_status = ifelse(estrogen_status == "Positive", 1, 0),
-  #   progesterone_status = ifelse(progesterone_status == "Positive", 1, 0)
-  # ) |> 
-  select(-survival_months, -differentiate)
+  dplyr::select(-survival_months, -differentiate, -n_stage, -t_stage, -estrogen_status, -regional_node_examined)
 
 summary(heart_df_log)
 str(heart_df_log)
 ```
 
-```{r}
-par(mfrow = c(1,2))
-qqnorm(heart_df_log$age, main = "age")
-qqline(heart_df_log$age, col = 2)
-qqnorm(heart_df_log$tumor_size, main = "tumor_size")
-qqline(heart_df_log$tumor_size, col = 2)
-qqnorm(heart_df_log$regional_node_examined, main = "regional_node_examined")
-qqline(heart_df_log$regional_node_examined, col = 2)
-qqnorm(heart_df_log$reginol_node_positive, main = "reginol_node_positive")
-qqline(heart_df_log$reginol_node_positive, col = 2)
-```
-
-<font color = "blue">most continuous data are right skewed, we can use a log function to make it more close to normal distribution </font>
-
+### examine interaction 
 
 ```{r}
-# heart_df_log = 
-#   heart_df_log |> 
-#     mutate(
-#       log_size = log(tumor_size),
-#       log_node_ex = log(regional_node_examined),
-#       log_node_po = log(reginol_node_positive)
-#     )
-# 
-# qqnorm(heart_df_log$log_node_po, main = "log_node_po")
-# qqline(heart_df_log$log_node_po, col = 2)
+glm_result_1 = glm(data = heart_df_log,
+                 status ~ a_stage * reginol_node_positive,
+                 binomial(link = 'logit'))
+broom::tidy(glm_result)
 ```
 
+<font color = "blue">I check all the 2 variable group to find whether there exists a correlation effect, and find a_stage and reginol_node_positive's interaction p-value is 1.37e-4, which means there interaction event play a vital role in our model. </font>
 
+# model variable select
 
-## t test & char squared
+## 1. stepwise
 
-```{r}
-x2 = c("race", "marital_status", "t_stage", "n_stage", "x6th_stage", "grade", "a_stage", "estrogen_status", "progesterone_status")
-
-x1 = c("age", "tumor_size", "regional_node_examined", "reginol_node_positive")
-
-library(tableone)
-table1 = CreateTableOne(
-  vars = c(x1, x2),
-  data = heart_df_log,
-  factorVars = x2,
-  strata = "status",
-  addOverall = FALSE)
-
-
-results1 = print(table1, showAllLevels = FALSE)
-
-knitr::kable(results1[,c(3)], align = 'c',
-      caption = 'Table 1')
-```
-
-<font color = "blue">`regional_node_examined` is not a very good data，but we can preserve it</font>
-
---------------------------------------------
-## stepwise
-
-### select
+### build model
 
 ```{r}
 model = 
-  glm(status ~ ., data = heart_df_log, family = binomial(link = 'logit'))
+  glm(status ~ . + a_stage * reginol_node_positive, 
+      data = heart_df_log, 
+      family = binomial(link = 'logit'))
 
 summary(model)
 
-step_model = step(model, direction = "both")
+model_step = step(model, direction = "both")
 
-summary(step_model)
+summary(model_step)
 ```
 
-<font color = "blue">1. grade level4 is not a good data, delete this level 2. delete tumor_size, marital_status, x6th_stage, a_stage, t_stage </font>
+<font color = "blue"> preserve all the variable.</font>
 
 ### the model
 
 ```{r}
-# heart_df_log =
-#   heart_df_log |>
-#     filter(!grade %in% "anaplastic; Grade IV")
-```
-
-```{r}
 formula1 = 
   as.formula(
-  status ~ age + race + n_stage + grade + estrogen_status + progesterone_status + regional_node_examined + reginol_node_positive)
+  status ~ age + race + marital_status + x6th_stage + grade + a_stage + tumor_size + progesterone_status + reginol_node_positive + a_stage * reginol_node_positive)
 
-model = glm(formula1, data = heart_df_log, family = binomial(link = 'logit'))
+model = glm(formula1, 
+            data = heart_df_log, 
+            family = binomial(link = 'logit'))
 
 summary(model)
 check_collinearity(model)
 ```
 
-
 ## random forest
 
-### select
+### build model
 
 ```{r}
 library(randomForest)
 set.seed(123)
 model = 
-  randomForest(status~., data = heart_df_log)
-model
+  randomForest(status~. + a_stage * reginol_node_positive, data = heart_df_log)
+
+summary(model)
 
 plot(model)
 
-which.min(model$err.rate[,1])
+forest_min = which.min(model$err.rate[,1])
 ```
 
 ```{r}
-model2 = randomForest(status~., data = heart_df_log, ntree = 233, mtry = 4)
-model2
+model_forest = 
+  randomForest(status~. + a_stage * reginol_node_positive, 
+               data = heart_df_log, 
+               ntree = forest_min, 
+               mtry = 4)
+
+model_forest
 ```
 
 ```{r}
-importance(model2)
-varImpPlot(model2)
+importance(model_forest)
+varImpPlot(model_forest)
 ```
 
 ### the model
 
+```{r}
+formula2 = 
+  as.formula(
+  status ~ tumor_size + age + reginol_node_positive + marital_status + x6th_stage + grade)
+
+model = glm(formula2, 
+            data = heart_df_log, 
+            family = binomial(link = 'logit'))
+
+summary(model)
+check_collinearity(model)
+```
+
+according to the picture, I find the first 6 most important variables have a mean decrease gini over 50, which is significantly larger than other variables, so I use these variables to build my final model.
+
 ## LASSO
 
-### select
+### build model
 
 ```{r}
-# corrlate = cor(as.matrix(heart_df))
-# corrplot.mixed(corrlate)
-
-x = as.matrix(heart_df_log[,2:14])
+x = as.matrix(heart_df_log[,2:9])
 y = as.matrix(heart_df_log[,1])
 ```
 ```{r}
-lasso =
+model_lasso =
   glmnet(x, y, alpha = 1, family = "binomial")
 
-lasso
+model_lasso
 ```
-lambda = 0.000882 only 3 predictors were preserved
+lambda = 0.001546 only 2 predictors were preserved
 
 ```{r}
 plot(lasso, xvar = "lambda", label = TRUE)
 
-lasso.coef = coef(lasso, s = 0.000882)
+lasso.coef = coef(lasso, s = 0.001546)
 lasso.coef
 ```
 
 ```{r}
 lambdas = seq(0, 0.5, length.out = 200)
-set.seed(123)
 cv.lasso = 
   cv.glmnet(x, 
             y, 
@@ -435,38 +367,49 @@ lasso.coef =
 lasso.coef
 ```
 
-
 ### model
 
 ```{r}
-model = 
-  glm(status ~ tumor_size + reginol_node_positive, data = heart_df_log, family = binomial())
-summary(model)
-```
+formula3 = 
+  as.formula(
+  status ~ tumor_size)
 
+model = glm(formula3, 
+            data = heart_df_log, 
+            family = binomial(link = 'logit'))
+
+summary(model)
+# check_collinearity(model)
+```
 
 # nomogram
 
 ```{r}
 dd = datadist(heart_df_log)
 options(datadist = "dd")
+
+nomogram_plot = function(input){
+  nomo_plot = 
+    regplot(input,
+            observation = heart_df_log[1,],
+            center = TRUE,
+            title = "Nomogram",
+            points = TRUE,
+            odds = FALSE,
+            showP = TRUE,
+            rank= "sd",
+            clickable = FALSE)
+}
 ```
 
 ```{r}
-fit1 = 
-  lrm(formula1, data = heart_df_log)
+fit1 = lrm(formula1, data = heart_df_log)
+fit2 = lrm(formula2, data = heart_df_log)
+fit3 = lrm(formula3, data = heart_df_log)
 
-nom1 = 
-  regplot(fit1,
-          observation = heart_df_log[80,],
-          center = TRUE,
-          title = "Nomogram",
-          points = TRUE,
-          odds = FALSE,
-          showP = TRUE,
-          rank= "sd",
-          clickable = FALSE)
-
+nomogram_plot(fit1)
+nomogram_plot(fit2)
+nomogram_plot(fit3)
 ```
 
 #ROC and AUC
@@ -478,44 +421,43 @@ fit1 = lrm(formula1,
            y = T)
 
 # AUC
-heart_df_log$predvalue1 = predict(fit1)
-library(pROC)
-ROC1 = roc(heart_df_log$status, 
-           heart_df_log$predvalue1)
-round(auc(ROC1),3)
-round(ci(auc(ROC1)),3)
-# 0.746
-```
+cal_auc = function(input){
+  heart_df_log$predvalue1 = predict(input)
+  ROC = roc(heart_df_log$status, 
+            heart_df_log$predvalue1)
+  round(auc(ROC),3)
+  round(ci(auc(ROC)),3)
 
-```{r}
-par(mfrow=c(1,1))
-plot(1 - ROC1$specificities,
-     ROC1$sensitivities,
-     type = "l",
-     col = "red",
-     lty = 1,
-     xlab = "FP",
-     ylab = "TP",
-     lwd = 2,
-     axes = TRUE,
-     xlim = c(0, 1))
-abline(0,1)
-legend(0.55, 0.35,
-      c("fit1"),
-      lty = c(1),
-      lwd = c(2),
-      col = c("red"),
-      bty = "n")
-```
+  plot(1 - ROC$specificities,
+       ROC$sensitivities,
+       type = "l",
+       col = "red",
+       lty = 1,
+       xlab = "FP",
+       ylab = "TP",
+       lwd = 2,
+       axes = TRUE,
+       xlim = c(0, 1))
+  abline(0,1)
+  legend(0.55, 0.35,
+        c(input),
+        lty = c(1),
+        lwd = c(2),
+        col = c("red"),
+        bty = "n")
+}
 
+cal_auc(fit1) + cal_auc(fit2) + cal_auc(fit3)
+```
 
 # 拟合优度检验H-L
 
 ```{r}
-fit1 = glm(formula1, 
-           data = heart_df_log,
-           family = binomial(link = logit))
+# fit1 = glm(formula1, 
+#            data = heart_df_log,
+#            family = binomial(link = logit))
 hl1 = hoslem.test(fit1$y, fitted(fit1), g = 10)
+hl2 = hoslem.test(fit2$y, fitted(fit2), g = 10)
 
 hl1
 ## X-squared = 8.8156, df = 8, p-value = 0.3581
@@ -547,3 +489,12 @@ model_caret_2 =
 model_caret_2$finalModel
 print(model_caret_2)
 ```
+
+
+# form
+h1
+
+
+# interpretation
+log(p/(1-p))= 
+
