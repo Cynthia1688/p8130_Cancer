@@ -515,7 +515,7 @@ KMplots_positive <- ggsurvplot(fit = KM_reginol_positive, data = cancer_df, conf
 gridExtra::grid.arrange(KMplots_tumor$plot, KMplots_positive$plot, nrow = 1)
 ```
 
-**Figure 3**. Kaplan-Meier survival curves for tumor size (left) and reginol node positive (right). The survival time for individuals with tumor size larger than 39mm appear significantly different from all other groups. The group with the smallest tumor size 1-16mm does not have the highest survival probability of the four groups over time. Reginol node positive, measured in number, appears to have multiple significant differences between groups. The group with the lowest positive node has the highest survival percentage over time, and the group with the highest positive node has the lowest survival percentage over time.
+**Figure 3**. Kaplan-Meier survival curves for tumor size (left) and reginol node positive (right). The survival time for individuals with tumor size larger than 39mm appear significantly different from all other groups. The group with the smallest tumor size 1-16mm has the highest survival probability of the four groups over time. Reginol node positive, measured in number, appears to have multiple significant differences between groups. The group with one node has the highest survival percentage over time, and the group with the highest positive node number $(= 6 - 46)$ has the lowest survival percentage over time.
 
 ```{r message=FALSE, echo=FALSE}
 KMplots_race<- ggsurvplot(fit = KM_race, data = cancer_df, conf.int = F, title = "Race", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Black", "Other", "White" ), legend.title = "", palette = c("#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
@@ -526,7 +526,7 @@ KMplots_marital<- ggsurvplot(fit = KM_marital, data = cancer_df, conf.int = F, t
 gridExtra::grid.arrange(KMplots_race$plot, KMplots_marital$plot, nrow = 1)
 ```
 
-**Figure 3**. Kaplan-Meier survival curves for race (left) and Marital Status (right). The survival time for individuals with race larger than 39mm appear significantly different from all other groups. The group with the smallest tumor size 1-16mm does not have the highest survival probability of the four groups over time. Reginol node positive, measured in number, appears to have multiple significant differences between groups. The group with the lowest positive node has the highest survival percentage over time, and the group with the highest positive node has the lowest survival percentage over time.
+**Figure 4**. Kaplan-Meier survival curves for race (left) and Marital Status (right). The survival time for the Black appears significantly lower than all other race groups. The other race have the highest survival probability of the three groups over time. Marital status appears to have multiple significant differences between groups. The seperated group has the lowest survival percentage over time, and the married group with the highest survival percentage over time.
 
 ```{r message=FALSE, echo=FALSE}
 KMplots_t_stage<- ggsurvplot(fit = KM_t_stage, data = cancer_df, conf.int = F, title = "T Stage: Adjusted AJCC 6th T", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("T1", "T2", "T3", "T4" ), legend.title = "", palette = c("#006400", "#8702e0", "#2903e8", "#c7000d"), ggtheme = theme_bw())
@@ -535,7 +535,8 @@ KMplots_n_stage<- ggsurvplot(fit = KM_n_stage, data = cancer_df, conf.int = F, t
 
 gridExtra::grid.arrange(KMplots_t_stage$plot, KMplots_n_stage$plot, nrow = 1)
 ```
-**Figure 4.** Kaplan-Meier survival curves for N Stage (left) and serum creatinine level (right). The survival time for individuals with ejection fraction percentages less than 30% appear significantly different from all other groups. The group with the highest ejection fraction percentage (45-80%) does not have the highest survival probability of the four groups over time. Serum creatinine, measured in mg/dL, appears to have multiple significant differences between groups. The group with the lowest levels has the highest survival percentage over time, and the group with the highest levels has the lowest survival percentage over time.
+
+**Figure 5.** Kaplan-Meier survival curves for T Stage (left) and N Stage (right). The survival time for individuals with Adjusted AJCC 6th T appear significantly different from all other groups. The group with T1 stage has the highest survival probability of the four groups over time. N Stage, Adjusted AJCC 6th N, appears to have multiple significant differences between groups. The group with the N1 stage has the highest survival percentage over time, and the group with the N3 stage has the lowest survival percentage over time.
 
 ```{r message=FALSE, echo=FALSE}
 KMplots_6_stage<- ggsurvplot(fit = KM_6_stage, data = cancer_df, conf.int = F, title = "6th Stage: Breast Adjusted AJCC 6th Stage", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Moderately differentiated", "Married", "Separated", "Single", "Widowed"), legend.title = "", palette = c("#d702cc","#8702e0", "#2903e8", "#c7000d", "#006400"), ggtheme = theme_bw())
@@ -544,7 +545,8 @@ KMplots_diff<- ggsurvplot(fit = KM_diff, data = cancer_df, conf.int = F, title =
 
 gridExtra::grid.arrange(KMplots_6_stage$plot, KMplots_diff$plot, nrow = 1)
 ```
-Figure 3. Kaplan-Meier survival curves for Breast Adjusted AJCC 6th Stage, multiple levels variable (left), and Differentiate variable (right). The survival time for widows is significantly different from married individuals. Survival time for undifferentiated individuals appears significantly different than all other differentiate groups. P-values for log rank tests do not specify which group(s) are significantly different, however plots can be used to discern visual differences.
+
+**Figure 6.** Kaplan-Meier survival curves for multiple levels variable Breast Adjusted AJCC 6th Stage (left), and Differentiate (right). The survival time for widows is significantly different from married individuals. Survival time for undifferentiated individuals appears significantly different than all other differentiate groups. P-values for log rank tests do not specify which group(s) are significantly different, however plots can be used to discern visual differences.
 
 ```{r message=FALSE, echo=FALSE}
 KMplots_grade<- ggsurvplot(fit = KM_grade, data = cancer_df, conf.int = F, title = "Grade", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("1", "2", "3", "4 (anaplastic)"), legend.title = "", palette = c("#8702e0", "#2903e8", "#c7000d", "#006400"), ggtheme = theme_bw())
@@ -554,13 +556,15 @@ KMplots_a_stage<- ggsurvplot(fit = KM_a_stage, data = cancer_df, conf.int = F, t
 
 gridExtra::grid.arrange(KMplots_grade$plot, KMplots_a_stage$plot, nrow = 1)
 ```
-**Figure 4.** Kaplan-Meier survival curves for grade (left) and a stage (right). The survival time for individuals with grade 4 (anaplastic) appear significantly different from all other groups. The group with the highest grade 1 does have the highest survival probability of the four groups over time. A Stage, measured in binary level, appears to have two significant differences between groups. The group with the regional stage has the highest survival percentage over time, and the group with the distant stage has the lowest survival percentage over time.
+
+**Figure 7.** Kaplan-Meier survival curves for grade (left) and a stage (right). The survival time for individuals with grade 4 (anaplastic) appear significantly different from all other groups. The group with the highest grade 1 does have the highest survival probability of the four groups over time. A Stage, measured in binary level, appears to have two significant differences between groups. The group with the regional stage has the highest survival percentage over time, and the group with the distant stage has the lowest survival percentage over time.
 
 ```{r message=FALSE, echo=FALSE}
 KMplots_estrogen <- ggsurvplot(fit = KM_estrogen, data = cancer_df, conf.int = F, title = "Estrogen Status", ylab = "Survival Probability", xlab = "Months", pval = T,legend.labs = c("Negative", "Positive"), legend.title = "", palette = c("#2903e8", "#c7000d"), ggtheme = theme_bw())
 KMplots_estrogen
 ```
-**Figure 5**. Kaplan-Meier survival curves of each Estrogen Status group. The survival time for individuals with negative Estrogen Status appears significantly different, and less than positive groups.
+
+**Figure 8**. Kaplan-Meier survival curves of each Estrogen Status group. The survival time for individuals with negative Estrogen Status appears significantly different, and less than positive groups.
 
 ```{r message=FALSE, echo=FALSE}
 #Kaplain-Meier estimators and plots for non-significant variables
