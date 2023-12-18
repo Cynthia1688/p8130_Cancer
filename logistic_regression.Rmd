@@ -1,11 +1,11 @@
 ---
 title: "Logistic Regression"
 date: "2023-12-06"
-output: 
-  html_document:
-    toc: true
-    toc_float: true
-    code_folding: "show" 
+output: github_document
+  # html_document:
+  #   toc: true
+  #   toc_float: true
+  #   code_folding: "show" 
 ---
 
 ```{r setup, include=FALSE}
@@ -453,8 +453,11 @@ nomogram_plot = function(input, number){
 
 ```{r}
 nomogram_plot(fit1, 1)
+knitr::include_graphics("nomogram_plot_1.png")
 nomogram_plot(fit2, 1)
+knitr::include_graphics("nomogram_plot_2.png")
 nomogram_plot(fit3, 1)
+knitr::include_graphics("nomogram_plot_3.png")
 ```
 
 <font color = "blue"> According to the monogram graph, we can compare three model by random choosing am observation from our dataset. In my code, I choose the first observation. We find that the probability to dead calculated in three models are 7.6%, 6.3% and 11.8%, the truth is that this persion is alive, so the model 2 has the best simulation effect.</font>
