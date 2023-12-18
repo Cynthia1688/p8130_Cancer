@@ -188,6 +188,7 @@ gridExtra::grid.arrange(
   ncol = 3)
 ```
 
+
 Comparing all numeric variables distribution, we have decided to conduct log-transform on `reginol_node_positive` variable:
 
 ```{r message=FALSE, echo=FALSE}
@@ -209,9 +210,61 @@ log_reg_plt =
     x = "regional node positive"
   )
 gridExtra::grid.arrange(org_reg_plt, log_reg_plt, nrow = 1)
+
 ```
 
 Comparing plots before and after log-transformation, we decided to  abandoned log-transform on `reginol_node_positive` variable and adopt other methods to analyze.
+
+# Box plot
+
+To detect outliers, we use box plot to have a quick glance on data:
+```{r message=FALSE, echo=FALSE}
+age_bxplt = 
+  cancer_df |> 
+  ggplot(aes(x = age)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 10, outlier.size = 1, color = "blue", fill = "blue", alpha = 0.5) +
+  labs(
+    title = "Outliers Plot for Age",
+    x = "age"
+  )
+
+tumor_size_bxplt = 
+  cancer_df |> 
+  ggplot(aes(x = tumor_size)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 10, outlier.size = 1, color = "blue", fill = "blue", alpha = 0.5) +
+  labs(
+    title = "Outliers Plot for Tumor Size",
+    x = "tumor size"
+  )
+
+reg_node_exam_bxplt = 
+  cancer_df |> 
+  ggplot(aes(x = regional_node_examined)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 10, outlier.size = 1, color = "blue", fill = "blue", alpha = 0.5) +
+  labs(
+    title = "Outliers Plot for Regional Node Examined",
+    x = "regional node examined"
+  )
+
+reg_node_pos_bxplt = 
+  cancer_df |> 
+  ggplot(aes(x = reginol_node_positive)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 10, outlier.size = 1, color = "blue", fill = "blue", alpha = 0.5) +
+  labs(
+    title = "Outliers Plot for Regional Node Positve",
+    x = "regional node positive"
+  )
+
+gridExtra::grid.arrange(
+  age_bxplt, 
+  tumor_size_bxplt, 
+  reg_node_exam_bxplt,
+  reg_node_pos_bxplt, 
+  nrow = 2,
+  ncol = 2)
+```
+
+**Figure 2** is outliers plots for numeric data. Age (upper left) variable show no sign of outliers. While tumer-size (upper right), Regional Node Examined (lower left), Regional Node Positive (lower right) contains many outliers, indicating a pattern of right skewed distribution.
 
 # Methods
 
