@@ -1,11 +1,11 @@
 ---
 title: "Logistic Regression"
 date: "2023-12-06"
-output: github_document
-  # html_document:
-  #   toc: true
-  #   toc_float: true
-  #   code_folding: "show" 
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}
