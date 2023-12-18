@@ -4,7 +4,7 @@ author: "Yunshen Bai"
 date: "`r Sys.Date()`"
 output: html_document
 ---
-```{r,message=FALSE}
+```{r,message=FALSE,warning=FALSE}
 library(tidyverse)
 library(survival)
 library(survminer)
@@ -12,8 +12,26 @@ library(MASS)
 library(ggplot2)
 ```
 
+The Cox proportional hazards model is a regression model commonly used in medical research to investigate the association between the survival time of patients and one or more predictor variables. The Cox proportional hazards regression analysis works for both quantitative and categorical predictor variables. The Cox regression model is an extension of survival analysis methods that allows for the simultaneous assessment of the effects of multiple risk factors on survival time. 
 
-clean the data
+The purpose of the model is to evaluate how specified factors influence the rate of a particular event occurring at a specific point in time, commonly referred to as the hazard rate. Predictor variables are typically referred to as covariates in the survival analysis literature.
+
+The Cox model was chosen because it is widely used when working with clinical data due to its applicability to a wide variety of studies. The basic formula for the Cox Proportional Hazard model can be written as $$h(t)=h_{0}(t)exp(\beta_1x_1+\beta_2x_2+...+\beta_px_p)$$ where  
+
+- t represents the survival time  
+- h(t) is the hazard function determined by a set of p covariates ($x_1,x_2,x_p$)  
+- the coefficients ($\beta_1,\beta_2,...,\beta_p$) measure the impact (i.e., the effect size) of covariates.  
+- the term $h_0$ is called the baseline hazard. It corresponds to the value of the hazard if all the $x_i$ are equal to zero
+
+The quantities $exp(\beta_i)$ are called hazard ratios (HR). In summary,  
+
+- HR = 1: No effect
+- HR < 1: Reduction in the hazard
+- HR > 1: Increase in Hazard
+
+In this report, we fit our data in Cox PH model to investigate the association between the survival time of patients and one or more predictor variables. 
+
+First, we need to clean this dataset. We set several variables as factor, drop the NA value in this dataset. 
 ```{r,message=FALSE}
 cancer_df=read_csv("Project_2_data.csv")|>
   janitor::clean_names() |>
@@ -36,16 +54,66 @@ cancer_df =
   )
 ```
 
+In this report, we will use `coxph` function to fit our Cox proportional hazards model. 
 
 ```{r}
 model=coxph(Surv(survival_months,status)~.,data=cancer_df)
+summary(model)
+```
+From the above result, we can know that there are a lot of insignificant variables in this model. Therefore, we will perform stepwise model selection to select the best model.
 
-model=stepAIC(model)
+```{r,message=FALSE}
+model2=stepAIC(model)
+summary(model2)
 ```
 
+From the result, there is no insignificant variables in this model. Also, this model passed the Likelihood ratio test, Wald test and Score test. Therefore, we consider this model as our final Cox proportional hazards model.
+
+Hazard function for the patient k is:$$h_k(t)=h_0(t)exp(0.020681*age-0.824963*I(race=Other)-0.434022*I(race=White)+0.390385*I(t\underline{\text{}}stage=T2)+0.515086*I(t\underline{\text{}}stage=T3)+ 0.942870*I(t_stage=T4)+0.437104*I(n\underline{\text{}}stage=N2)+0.566361*I(n\underline{\text{}}stage=N3)+0.351012*I(differentiate=Poorly\;differentiated)+1.073612*I(differentiate=Undifferentiated)-0.451588*I(differentiate=Well\;differentiated)-0.649768*I(estrogen\underline{\text{}}status=Positive)-0.492671*I(progesterone\underline{\text{}}status=Positive)-0.033584*regional\underline{\text{}}node\underline{\text{}}examined+0.063401*reginol\underline{\text{}}node\underline{\text{}}positive)$$
+
+
+
+
+In this report, we are interested in interacting effects of the cox PH model. Therefore, we use exhaustive method to find every possible interaction variable and see whether the model will have a better performance.
+
 ```{r}
-ggsurvplot(survfit(model,data=cancer_df), palette= '#2E9FDF',
+model3=coxph(formula = Surv(survival_months, status) ~ (age + race + t_stage + n_stage + differentiate + estrogen_status + progesterone_status + regional_node_examined + reginol_node_positive)^2, data = cancer_df)
+```
+
+Also, we will use stepwise to select variables.
+
+```{r}
+model3=stepAIC(model3)
+```
+
+However, there are still a lot of insignificant variables in this model. We decide to remove these variables from this model to have a better performance.
+
+```{r}
+model3=update(model3,.~.-race:estrogen_status-t_stage:regional_node_examined-t_stage:reginol_node_positive -differentiate:reginol_node_positive-progesterone_status:reginol_node_positive)
+```
+
+Then, we use AIC to compare the model without interaction variables and model with interaction variables. 
+
+```{r}
+AIC(model2,model3)
+```
+
+Since model with interaction variables has smaller AIC, we consider this model as our final model.
+
+After fitting the Cox model to the data, it is possible to visualize the predicted survival for a specific risk group at any given time point. The function `survfit` estimates survival proportions.
+
+Unlike the KM survival curve, the Cox model fit curve outputs the predicted survival after correcting for other variables, rather than the actual observed survival.
+
+```{r,warning=FALSE}
+ggsurvplot(survfit(model3,data=cancer_df), palette= '#2E9FDF',
            ggtheme = theme_minimal())
 ```
 
+We may wish to show how estimated survival is affected by specific variable. Using race as an example, we can plot the survival probabilities of different races over time when all other variables are equal
 
+
+```{r}
+fit <- survfit(Surv(survival_months,status)~race,data=cancer_df)
+ggsurvplot(fit, conf.int = TRUE, 
+           ggtheme = theme_minimal(),ylim=c(0.6,1))
+```

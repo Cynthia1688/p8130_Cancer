@@ -11,7 +11,7 @@
 
 <meta name="author" content="Yunshen Bai" />
 
-<meta name="date" content="2023-12-13" />
+<meta name="date" content="2023-12-17" />
 
 <title>cox_ph</title>
 
@@ -352,29 +352,58 @@ display: none;
 
 <h1 class="title toc-ignore">cox_ph</h1>
 <h4 class="author">Yunshen Bai</h4>
-<h4 class="date">2023-12-13</h4>
+<h4 class="date">2023-12-17</h4>
 
 </div>
 
 
-<pre class="r"><code>library(tidyverse)</code></pre>
-<pre><code>## Warning: package &#39;tidyverse&#39; was built under R version 4.1.3</code></pre>
-<pre><code>## Warning: package &#39;ggplot2&#39; was built under R version 4.1.3</code></pre>
-<pre><code>## Warning: package &#39;tibble&#39; was built under R version 4.1.3</code></pre>
-<pre><code>## Warning: package &#39;tidyr&#39; was built under R version 4.1.3</code></pre>
-<pre><code>## Warning: package &#39;readr&#39; was built under R version 4.1.3</code></pre>
-<pre><code>## Warning: package &#39;purrr&#39; was built under R version 4.1.3</code></pre>
-<pre><code>## Warning: package &#39;dplyr&#39; was built under R version 4.1.3</code></pre>
-<pre><code>## Warning: package &#39;stringr&#39; was built under R version 4.1.3</code></pre>
-<pre><code>## Warning: package &#39;forcats&#39; was built under R version 4.1.3</code></pre>
-<pre><code>## Warning: package &#39;lubridate&#39; was built under R version 4.1.3</code></pre>
-<pre class="r"><code>library(survival)
-library(survminer)</code></pre>
-<pre><code>## Warning: package &#39;survminer&#39; was built under R version 4.1.3</code></pre>
-<pre><code>## Warning: package &#39;ggpubr&#39; was built under R version 4.1.3</code></pre>
-<pre class="r"><code>library(MASS)
+<pre class="r"><code>library(tidyverse)
+library(survival)
+library(survminer)
+library(MASS)
 library(ggplot2)</code></pre>
-<p>clean the data</p>
+<p>The Cox proportional hazards model is a regression model commonly
+used in medical research to investigate the association between the
+survival time of patients and one or more predictor variables. The Cox
+proportional hazards regression analysis works for both quantitative and
+categorical predictor variables. The Cox regression model is an
+extension of survival analysis methods that allows for the simultaneous
+assessment of the effects of multiple risk factors on survival time.</p>
+<p>The purpose of the model is to evaluate how specified factors
+influence the rate of a particular event occurring at a specific point
+in time, commonly referred to as the hazard rate. Predictor variables
+are typically referred to as covariates in the survival analysis
+literature.</p>
+<p>The Cox model was chosen because it is widely used when working with
+clinical data due to its applicability to a wide variety of studies. The
+basic formula for the Cox Proportional Hazard model can be written as
+<span class="math display">\[h(t)=h_{0}(t)exp(\beta_1x_1+\beta_2x_2+...+\beta_px_p)\]</span>
+where</p>
+<ul>
+<li>t represents the survival time<br />
+</li>
+<li>h(t) is the hazard function determined by a set of p covariates
+(<span class="math inline">\(x_1,x_2,x_p\)</span>)<br />
+</li>
+<li>the coefficients (<span class="math inline">\(\beta_1,\beta_2,...,\beta_p\)</span>) measure the
+impact (i.e., the effect size) of covariates.<br />
+</li>
+<li>the term <span class="math inline">\(h_0\)</span> is called the
+baseline hazard. It corresponds to the value of the hazard if all the
+<span class="math inline">\(x_i\)</span> are equal to zero</li>
+</ul>
+<p>The quantities <span class="math inline">\(exp(\beta_i)\)</span> are
+called hazard ratios (HR). In summary,</p>
+<ul>
+<li>HR = 1: No effect</li>
+<li>HR &lt; 1: Reduction in the hazard</li>
+<li>HR &gt; 1: Increase in Hazard</li>
+</ul>
+<p>In this report, we fit our data in Cox PH model to investigate the
+association between the survival time of patients and one or more
+predictor variables.</p>
+<p>First, we need to clean this dataset. We set several variables as
+factor, drop the NA value in this dataset.</p>
 <pre class="r"><code>cancer_df=read_csv(&quot;Project_2_data.csv&quot;)|&gt;
   janitor::clean_names() |&gt;
   drop_na()
@@ -394,9 +423,114 @@ cancer_df =
         &quot;Alive&quot; ~ 0,
         &quot;Dead&quot; ~ 1)
   )</code></pre>
+<p>In this report, we will use <code>coxph</code> function to fit our
+Cox proportional hazards model.</p>
 <pre class="r"><code>model=coxph(Surv(survival_months,status)~.,data=cancer_df)
-
-model=stepAIC(model)</code></pre>
+summary(model)</code></pre>
+<pre><code>## Call:
+## coxph(formula = Surv(survival_months, status) ~ ., data = cancer_df)
+## 
+##   n= 4024, number of events= 616 
+## 
+##                                         coef exp(coef)  se(coef)      z
+## age                                 0.020463  1.020673  0.004873  4.200
+## raceOther                          -0.736866  0.478612  0.214042 -3.443
+## raceWhite                          -0.370655  0.690282  0.129776 -2.856
+## marital_statusMarried              -0.203376  0.815971  0.119228 -1.706
+## marital_statusSeparated             0.391784  1.479619  0.290182  1.350
+## marital_statusSingle               -0.030024  0.970422  0.146084 -0.206
+## marital_statusWidowed              -0.030182  0.970269  0.181574 -0.166
+## t_stageT2                           0.201182  1.222847  0.160641  1.252
+## t_stageT3                           0.354265  1.425133  0.253364  1.398
+## t_stageT4                           0.637921  1.892542  0.313356  2.036
+## n_stageN2                           0.568511  1.765636  0.203140  2.799
+## n_stageN3                           0.756433  2.130663  0.240152  3.150
+## x6th_stageIIB                       0.269771  1.309664  0.201799  1.337
+## x6th_stageIIIA                      0.027973  1.028368  0.254824  0.110
+## x6th_stageIIIB                      0.202537  1.224505  0.395992  0.511
+## x6th_stageIIIC                            NA        NA  0.000000     NA
+## differentiatePoorly differentiated  0.351803  1.421629  0.089308  3.939
+## differentiateUndifferentiated       1.104912  3.018960  0.349828  3.158
+## differentiateWell differentiated   -0.449352  0.638042  0.171180 -2.625
+## grade2                                    NA        NA  0.000000     NA
+## grade3                                    NA        NA  0.000000     NA
+## gradeanaplastic; Grade IV                 NA        NA  0.000000     NA
+## a_stageRegional                    -0.150448  0.860322  0.194018 -0.775
+## tumor_size                          0.001680  1.001681  0.003161  0.531
+## estrogen_statusPositive            -0.648532  0.522813  0.135622 -4.782
+## progesterone_statusPositive        -0.486487  0.614782  0.106949 -4.549
+## regional_node_examined             -0.033013  0.967526  0.006492 -5.085
+## reginol_node_positive               0.058490  1.060234  0.011353  5.152
+##                                    Pr(&gt;|z|)    
+## age                                2.67e-05 ***
+## raceOther                          0.000576 ***
+## raceWhite                          0.004289 ** 
+## marital_statusMarried              0.088051 .  
+## marital_statusSeparated            0.176973    
+## marital_statusSingle               0.837162    
+## marital_statusWidowed              0.867980    
+## t_stageT2                          0.210435    
+## t_stageT3                          0.162038    
+## t_stageT4                          0.041773 *  
+## n_stageN2                          0.005132 ** 
+## n_stageN3                          0.001634 ** 
+## x6th_stageIIB                      0.181279    
+## x6th_stageIIIA                     0.912589    
+## x6th_stageIIIB                     0.609025    
+## x6th_stageIIIC                           NA    
+## differentiatePoorly differentiated 8.18e-05 ***
+## differentiateUndifferentiated      0.001586 ** 
+## differentiateWell differentiated   0.008664 ** 
+## grade2                                   NA    
+## grade3                                   NA    
+## gradeanaplastic; Grade IV                NA    
+## a_stageRegional                    0.438084    
+## tumor_size                         0.595099    
+## estrogen_statusPositive            1.74e-06 ***
+## progesterone_statusPositive        5.40e-06 ***
+## regional_node_examined             3.67e-07 ***
+## reginol_node_positive              2.58e-07 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+##                                    exp(coef) exp(-coef) lower .95 upper .95
+## age                                   1.0207     0.9797    1.0110    1.0305
+## raceOther                             0.4786     2.0894    0.3146    0.7281
+## raceWhite                             0.6903     1.4487    0.5353    0.8902
+## marital_statusMarried                 0.8160     1.2255    0.6459    1.0308
+## marital_statusSeparated               1.4796     0.6758    0.8378    2.6131
+## marital_statusSingle                  0.9704     1.0305    0.7288    1.2921
+## marital_statusWidowed                 0.9703     1.0306    0.6797    1.3850
+## t_stageT2                             1.2228     0.8178    0.8926    1.6754
+## t_stageT3                             1.4251     0.7017    0.8673    2.3416
+## t_stageT4                             1.8925     0.5284    1.0240    3.4976
+## n_stageN2                             1.7656     0.5664    1.1857    2.6291
+## n_stageN3                             2.1307     0.4693    1.3308    3.4114
+## x6th_stageIIB                         1.3097     0.7636    0.8818    1.9451
+## x6th_stageIIIA                        1.0284     0.9724    0.6241    1.6946
+## x6th_stageIIIB                        1.2245     0.8167    0.5635    2.6609
+## x6th_stageIIIC                            NA         NA        NA        NA
+## differentiatePoorly differentiated    1.4216     0.7034    1.1933    1.6936
+## differentiateUndifferentiated         3.0190     0.3312    1.5208    5.9928
+## differentiateWell differentiated      0.6380     1.5673    0.4562    0.8924
+## grade2                                    NA         NA        NA        NA
+## grade3                                    NA         NA        NA        NA
+## gradeanaplastic; Grade IV                 NA         NA        NA        NA
+## a_stageRegional                       0.8603     1.1624    0.5882    1.2584
+## tumor_size                            1.0017     0.9983    0.9955    1.0079
+## estrogen_statusPositive               0.5228     1.9127    0.4008    0.6820
+## progesterone_statusPositive           0.6148     1.6266    0.4985    0.7582
+## regional_node_examined                0.9675     1.0336    0.9553    0.9799
+## reginol_node_positive                 1.0602     0.9432    1.0369    1.0841
+## 
+## Concordance= 0.744  (se = 0.011 )
+## Likelihood ratio test= 501.6  on 24 df,   p=&lt;2e-16
+## Wald test            = 570.2  on 24 df,   p=&lt;2e-16
+## Score (logrank) test = 665  on 24 df,   p=&lt;2e-16</code></pre>
+<p>From the above result, we can know that there are a lot of
+insignificant variables in this model. Therefore, we will perform
+stepwise model selection to select the best model.</p>
+<pre class="r"><code>model2=stepAIC(model)</code></pre>
 <pre><code>## Start:  AIC=9384.39
 ## Surv(survival_months, status) ~ age + race + marital_status + 
 ##     t_stage + n_stage + x6th_stage + differentiate + grade + 
@@ -500,9 +634,1713 @@ model=stepAIC(model)</code></pre>
 ## - regional_node_examined  1 9404.4
 ## - reginol_node_positive   1 9404.5
 ## - differentiate           3 9406.0</code></pre>
-<pre class="r"><code>ggsurvplot(survfit(model,data=cancer_df), palette= &#39;#2E9FDF&#39;,
+<pre class="r"><code>summary(model2)</code></pre>
+<pre><code>## Call:
+## coxph(formula = Surv(survival_months, status) ~ age + race + 
+##     t_stage + n_stage + differentiate + estrogen_status + progesterone_status + 
+##     regional_node_examined + reginol_node_positive, data = cancer_df)
+## 
+##   n= 4024, number of events= 616 
+## 
+##                                         coef exp(coef)  se(coef)      z
+## age                                 0.020681  1.020896  0.004709  4.392
+## raceOther                          -0.824963  0.438251  0.210798 -3.914
+## raceWhite                          -0.434022  0.647898  0.126380 -3.434
+## t_stageT2                           0.390385  1.477549  0.100597  3.881
+## t_stageT3                           0.515086  1.673783  0.127445  4.042
+## t_stageT4                           0.942870  2.567340  0.182979  5.153
+## n_stageN2                           0.437104  1.548217  0.109006  4.010
+## n_stageN3                           0.566361  1.761844  0.178638  3.170
+## differentiatePoorly differentiated  0.351012  1.420505  0.089041  3.942
+## differentiateUndifferentiated       1.073612  2.925928  0.343971  3.121
+## differentiateWell differentiated   -0.451588  0.636616  0.170927 -2.642
+## estrogen_statusPositive            -0.649768  0.522167  0.134691 -4.824
+## progesterone_statusPositive        -0.492671  0.610992  0.106551 -4.624
+## regional_node_examined             -0.033584  0.966974  0.006484 -5.180
+## reginol_node_positive               0.063401  1.065454  0.011260  5.631
+##                                    Pr(&gt;|z|)    
+## age                                1.12e-05 ***
+## raceOther                          9.10e-05 ***
+## raceWhite                          0.000594 ***
+## t_stageT2                          0.000104 ***
+## t_stageT3                          5.31e-05 ***
+## t_stageT4                          2.57e-07 ***
+## n_stageN2                          6.07e-05 ***
+## n_stageN3                          0.001522 ** 
+## differentiatePoorly differentiated 8.08e-05 ***
+## differentiateUndifferentiated      0.001801 ** 
+## differentiateWell differentiated   0.008242 ** 
+## estrogen_statusPositive            1.41e-06 ***
+## progesterone_statusPositive        3.77e-06 ***
+## regional_node_examined             2.22e-07 ***
+## reginol_node_positive              1.80e-08 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+##                                    exp(coef) exp(-coef) lower .95 upper .95
+## age                                   1.0209     0.9795    1.0115    1.0304
+## raceOther                             0.4383     2.2818    0.2899    0.6625
+## raceWhite                             0.6479     1.5435    0.5057    0.8300
+## t_stageT2                             1.4775     0.6768    1.2131    1.7996
+## t_stageT3                             1.6738     0.5974    1.3038    2.1487
+## t_stageT4                             2.5673     0.3895    1.7936    3.6748
+## n_stageN2                             1.5482     0.6459    1.2504    1.9170
+## n_stageN3                             1.7618     0.5676    1.2414    2.5005
+## differentiatePoorly differentiated    1.4205     0.7040    1.1930    1.6914
+## differentiateUndifferentiated         2.9259     0.3418    1.4910    5.7419
+## differentiateWell differentiated      0.6366     1.5708    0.4554    0.8900
+## estrogen_statusPositive               0.5222     1.9151    0.4010    0.6799
+## progesterone_statusPositive           0.6110     1.6367    0.4958    0.7529
+## regional_node_examined                0.9670     1.0342    0.9548    0.9793
+## reginol_node_positive                 1.0655     0.9386    1.0422    1.0892
+## 
+## Concordance= 0.741  (se = 0.011 )
+## Likelihood ratio test= 490.6  on 15 df,   p=&lt;2e-16
+## Wald test            = 554.9  on 15 df,   p=&lt;2e-16
+## Score (logrank) test = 640.7  on 15 df,   p=&lt;2e-16</code></pre>
+<p>From the result, there is no insignificant variables in this model.
+Also, this model passed the Likelihood ratio test, Wald test and Score
+test. Therefore, we consider this model as our final Cox proportional
+hazards model.</p>
+<p>Hazard function for the patient k is:<span class="math display">\[h_k(t)=h_0(t)exp(0.020681*age-0.824963*I(race=Other)-0.434022*I(race=White)+0.390385*I(t\underline{\text{}}stage=T2)+0.515086*I(t\underline{\text{}}stage=T3)+
+0.942870*I(t_stage=T4)+0.437104*I(n\underline{\text{}}stage=N2)+0.566361*I(n\underline{\text{}}stage=N3)+0.351012*I(differentiate=Poorly\;differentiated)+1.073612*I(differentiate=Undifferentiated)-0.451588*I(differentiate=Well\;differentiated)-0.649768*I(estrogen\underline{\text{}}status=Positive)-0.492671*I(progesterone\underline{\text{}}status=Positive)-0.033584*regional\underline{\text{}}node\underline{\text{}}examined+0.063401*reginol\underline{\text{}}node\underline{\text{}}positive)\]</span></p>
+<p>In this report, we are interested in interacting effects of the cox
+PH model. Therefore, we use exhaustive method to find every possible
+interaction variable and see whether the model will have a better
+performance.</p>
+<pre class="r"><code>model3=coxph(formula = Surv(survival_months, status) ~ (age + race + t_stage + n_stage + differentiate + estrogen_status + progesterone_status + regional_node_examined + reginol_node_positive)^2, data = cancer_df)</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge</code></pre>
+<p>Also, we will use stepwise to select variables.</p>
+<pre class="r"><code>model3=stepAIC(model3)</code></pre>
+<pre><code>## Start:  AIC=9442.07
+## Surv(survival_months, status) ~ (age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive)^2</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge</code></pre>
+<pre><code>##                                                Df    AIC
+## - race:t_stage                                  6 9431.8
+## - t_stage:n_stage                               6 9434.3
+## - age:differentiate                             3 9438.1
+## - n_stage:reginol_node_positive                 2 9438.1
+## - differentiate:estrogen_status                 3 9438.2
+## - race:regional_node_examined                   2 9438.4
+## - race:n_stage                                  4 9439.0
+## - n_stage:regional_node_examined                2 9439.6
+## - age:race                                      2 9439.8
+## - age:progesterone_status                       1 9440.1
+## - progesterone_status:regional_node_examined    1 9440.1
+## - n_stage:progesterone_status                   2 9440.1
+## - age:t_stage                                   3 9440.2
+## - estrogen_status:regional_node_examined        1 9440.3
+## - n_stage:estrogen_status                       2 9440.3
+## - regional_node_examined:reginol_node_positive  1 9440.3
+## - estrogen_status:reginol_node_positive         1 9440.4
+## - differentiate:progesterone_status             4 9440.7
+## - t_stage:progesterone_status                   3 9440.9
+## - race:reginol_node_positive                    2 9441.0
+## - t_stage:reginol_node_positive                 3 9441.1
+## - progesterone_status:reginol_node_positive     1 9441.2
+## - age:n_stage                                   2 9441.5
+## - estrogen_status:progesterone_status           1 9441.8
+## - age:estrogen_status                           1 9441.9
+## - race:estrogen_status                          2 9442.0
+## &lt;none&gt;                                            9442.1
+## - age:regional_node_examined                    1 9442.1
+## - age:reginol_node_positive                     1 9443.8
+## - n_stage:differentiate                         7 9443.9
+## - t_stage:differentiate                        10 9444.2
+## - differentiate:regional_node_examined          4 9446.5
+## - race:progesterone_status                      2 9447.5
+## - t_stage:regional_node_examined                3 9448.6
+## - differentiate:reginol_node_positive           4 9449.9
+## - race:differentiate                            6 9450.4
+## - t_stage:estrogen_status                       3 9452.5</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge</code></pre>
+<pre><code>## 
+## Step:  AIC=9431.78
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:race + age:t_stage + age:n_stage + 
+##     age:differentiate + age:estrogen_status + age:progesterone_status + 
+##     age:regional_node_examined + age:reginol_node_positive + 
+##     race:n_stage + race:differentiate + race:estrogen_status + 
+##     race:progesterone_status + race:regional_node_examined + 
+##     race:reginol_node_positive + t_stage:n_stage + t_stage:differentiate + 
+##     t_stage:estrogen_status + t_stage:progesterone_status + t_stage:regional_node_examined + 
+##     t_stage:reginol_node_positive + n_stage:differentiate + n_stage:estrogen_status + 
+##     n_stage:progesterone_status + n_stage:regional_node_examined + 
+##     n_stage:reginol_node_positive + differentiate:estrogen_status + 
+##     differentiate:progesterone_status + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + estrogen_status:progesterone_status + 
+##     estrogen_status:regional_node_examined + estrogen_status:reginol_node_positive + 
+##     progesterone_status:regional_node_examined + progesterone_status:reginol_node_positive + 
+##     regional_node_examined:reginol_node_positive</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge</code></pre>
+<pre><code>##                                                Df    AIC
+## - t_stage:n_stage                               6 9424.7
+## - n_stage:reginol_node_positive                 2 9427.8
+## - age:differentiate                             3 9427.9
+## - differentiate:estrogen_status                 3 9427.9
+## - race:regional_node_examined                   2 9428.2
+## - race:n_stage                                  4 9428.6
+## - n_stage:regional_node_examined                2 9429.3
+## - age:race                                      2 9429.5
+## - age:t_stage                                   3 9429.7
+## - n_stage:progesterone_status                   2 9429.8
+## - age:progesterone_status                       1 9429.8
+## - progesterone_status:regional_node_examined    1 9429.8
+## - estrogen_status:regional_node_examined        1 9430.0
+## - n_stage:estrogen_status                       2 9430.0
+## - regional_node_examined:reginol_node_positive  1 9430.1
+## - estrogen_status:reginol_node_positive         1 9430.2
+## - race:reginol_node_positive                    2 9430.3
+## - differentiate:progesterone_status             4 9430.4
+## - t_stage:progesterone_status                   3 9430.7
+## - progesterone_status:reginol_node_positive     1 9431.0
+## - age:n_stage                                   2 9431.4
+## - t_stage:reginol_node_positive                 3 9431.5
+## - estrogen_status:progesterone_status           1 9431.5
+## - age:estrogen_status                           1 9431.7
+## - race:estrogen_status                          2 9431.8
+## &lt;none&gt;                                            9431.8
+## - age:regional_node_examined                    1 9431.9
+## - n_stage:differentiate                         7 9433.5
+## - age:reginol_node_positive                     1 9433.6
+## - t_stage:differentiate                        10 9434.0
+## - differentiate:regional_node_examined          4 9436.2
+## - race:progesterone_status                      2 9437.5
+## - t_stage:regional_node_examined                3 9438.3
+## - differentiate:reginol_node_positive           4 9439.5
+## - race:differentiate                            6 9440.2
+## - t_stage:estrogen_status                       3 9442.0</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge</code></pre>
+<pre><code>## 
+## Step:  AIC=9424.74
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:race + age:t_stage + age:n_stage + 
+##     age:differentiate + age:estrogen_status + age:progesterone_status + 
+##     age:regional_node_examined + age:reginol_node_positive + 
+##     race:n_stage + race:differentiate + race:estrogen_status + 
+##     race:progesterone_status + race:regional_node_examined + 
+##     race:reginol_node_positive + t_stage:differentiate + t_stage:estrogen_status + 
+##     t_stage:progesterone_status + t_stage:regional_node_examined + 
+##     t_stage:reginol_node_positive + n_stage:differentiate + n_stage:estrogen_status + 
+##     n_stage:progesterone_status + n_stage:regional_node_examined + 
+##     n_stage:reginol_node_positive + differentiate:estrogen_status + 
+##     differentiate:progesterone_status + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + estrogen_status:progesterone_status + 
+##     estrogen_status:regional_node_examined + estrogen_status:reginol_node_positive + 
+##     progesterone_status:regional_node_examined + progesterone_status:reginol_node_positive + 
+##     regional_node_examined:reginol_node_positive</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge</code></pre>
+<pre><code>##                                                Df    AIC
+## - n_stage:reginol_node_positive                 2 9420.7
+## - differentiate:estrogen_status                 3 9420.8
+## - age:differentiate                             3 9420.9
+## - race:regional_node_examined                   2 9421.1
+## - race:n_stage                                  4 9421.2
+## - n_stage:regional_node_examined                2 9421.6
+## - age:t_stage                                   3 9422.1
+## - age:race                                      2 9422.5
+## - regional_node_examined:reginol_node_positive  1 9422.7
+## - progesterone_status:regional_node_examined    1 9422.8
+## - age:progesterone_status                       1 9422.8
+## - estrogen_status:regional_node_examined        1 9422.9
+## - n_stage:progesterone_status                   2 9422.9
+## - race:reginol_node_positive                    2 9423.1
+## - differentiate:progesterone_status             4 9423.1
+## - estrogen_status:reginol_node_positive         1 9423.3
+## - n_stage:estrogen_status                       2 9423.5
+## - progesterone_status:reginol_node_positive     1 9424.0
+## - t_stage:progesterone_status                   3 9424.1
+## - age:n_stage                                   2 9424.2
+## - estrogen_status:progesterone_status           1 9424.2
+## - age:estrogen_status                           1 9424.5
+## - race:estrogen_status                          2 9424.6
+## - age:regional_node_examined                    1 9424.7
+## &lt;none&gt;                                            9424.7
+## - t_stage:reginol_node_positive                 3 9425.2
+## - n_stage:differentiate                         7 9426.3
+## - age:reginol_node_positive                     1 9426.5
+## - t_stage:differentiate                        10 9426.8
+## - differentiate:regional_node_examined          4 9429.1
+## - race:progesterone_status                      2 9430.0
+## - t_stage:regional_node_examined                3 9430.3
+## - differentiate:reginol_node_positive           4 9432.1
+## - race:differentiate                            6 9432.6
+## - t_stage:estrogen_status                       3 9435.0</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge</code></pre>
+<pre><code>## 
+## Step:  AIC=9420.74
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:race + age:t_stage + age:n_stage + 
+##     age:differentiate + age:estrogen_status + age:progesterone_status + 
+##     age:regional_node_examined + age:reginol_node_positive + 
+##     race:n_stage + race:differentiate + race:estrogen_status + 
+##     race:progesterone_status + race:regional_node_examined + 
+##     race:reginol_node_positive + t_stage:differentiate + t_stage:estrogen_status + 
+##     t_stage:progesterone_status + t_stage:regional_node_examined + 
+##     t_stage:reginol_node_positive + n_stage:differentiate + n_stage:estrogen_status + 
+##     n_stage:progesterone_status + n_stage:regional_node_examined + 
+##     differentiate:estrogen_status + differentiate:progesterone_status + 
+##     differentiate:regional_node_examined + differentiate:reginol_node_positive + 
+##     estrogen_status:progesterone_status + estrogen_status:regional_node_examined + 
+##     estrogen_status:reginol_node_positive + progesterone_status:regional_node_examined + 
+##     progesterone_status:reginol_node_positive + regional_node_examined:reginol_node_positive</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge</code></pre>
+<pre><code>##                                                Df    AIC
+## - differentiate:estrogen_status                 3 9416.8
+## - age:differentiate                             3 9416.9
+## - race:regional_node_examined                   2 9417.1
+## - race:n_stage                                  4 9417.2
+## - n_stage:regional_node_examined                2 9417.7
+## - age:t_stage                                   3 9418.2
+## - age:race                                      2 9418.5
+## - regional_node_examined:reginol_node_positive  1 9418.7
+## - progesterone_status:regional_node_examined    1 9418.8
+## - age:progesterone_status                       1 9418.8
+## - estrogen_status:regional_node_examined        1 9418.9
+## - n_stage:progesterone_status                   2 9418.9
+## - race:reginol_node_positive                    2 9419.1
+## - differentiate:progesterone_status             4 9419.1
+## - estrogen_status:reginol_node_positive         1 9419.3
+## - n_stage:estrogen_status                       2 9419.5
+## - progesterone_status:reginol_node_positive     1 9420.0
+## - t_stage:progesterone_status                   3 9420.1
+## - age:n_stage                                   2 9420.2
+## - estrogen_status:progesterone_status           1 9420.2
+## - age:estrogen_status                           1 9420.5
+## - race:estrogen_status                          2 9420.6
+## - age:regional_node_examined                    1 9420.7
+## &lt;none&gt;                                            9420.7
+## - t_stage:reginol_node_positive                 3 9421.3
+## - n_stage:differentiate                         7 9422.3
+## - age:reginol_node_positive                     1 9422.5
+## - t_stage:differentiate                        10 9422.8
+## - differentiate:regional_node_examined          4 9425.1
+## - race:progesterone_status                      2 9426.0
+## - t_stage:regional_node_examined                3 9426.3
+## - differentiate:reginol_node_positive           4 9428.2
+## - race:differentiate                            6 9428.6
+## - t_stage:estrogen_status                       3 9431.1</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge</code></pre>
+<pre><code>## 
+## Step:  AIC=9416.81
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:race + age:t_stage + age:n_stage + 
+##     age:differentiate + age:estrogen_status + age:progesterone_status + 
+##     age:regional_node_examined + age:reginol_node_positive + 
+##     race:n_stage + race:differentiate + race:estrogen_status + 
+##     race:progesterone_status + race:regional_node_examined + 
+##     race:reginol_node_positive + t_stage:differentiate + t_stage:estrogen_status + 
+##     t_stage:progesterone_status + t_stage:regional_node_examined + 
+##     t_stage:reginol_node_positive + n_stage:differentiate + n_stage:estrogen_status + 
+##     n_stage:progesterone_status + n_stage:regional_node_examined + 
+##     differentiate:progesterone_status + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + estrogen_status:progesterone_status + 
+##     estrogen_status:regional_node_examined + estrogen_status:reginol_node_positive + 
+##     progesterone_status:regional_node_examined + progesterone_status:reginol_node_positive + 
+##     regional_node_examined:reginol_node_positive</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge</code></pre>
+<pre><code>##                                                Df    AIC
+## - race:regional_node_examined                   2 9413.2
+## - race:n_stage                                  4 9413.4
+## - age:differentiate                             4 9413.5
+## - n_stage:regional_node_examined                2 9413.8
+## - age:t_stage                                   3 9414.2
+## - age:race                                      2 9414.6
+## - regional_node_examined:reginol_node_positive  1 9414.8
+## - age:progesterone_status                       1 9414.8
+## - progesterone_status:regional_node_examined    1 9414.9
+## - estrogen_status:regional_node_examined        1 9415.0
+## - n_stage:progesterone_status                   2 9415.1
+## - race:reginol_node_positive                    2 9415.2
+## - n_stage:estrogen_status                       2 9415.2
+## - estrogen_status:reginol_node_positive         1 9415.3
+## - progesterone_status:reginol_node_positive     1 9416.1
+## - t_stage:progesterone_status                   3 9416.1
+## - estrogen_status:progesterone_status           1 9416.2
+## - age:n_stage                                   2 9416.4
+## - race:estrogen_status                          2 9416.5
+## - age:regional_node_examined                    1 9416.6
+## - age:estrogen_status                           1 9416.7
+## - differentiate:progesterone_status             4 9416.7
+## &lt;none&gt;                                            9416.8
+## - t_stage:reginol_node_positive                 3 9417.5
+## - n_stage:differentiate                         7 9418.5
+## - age:reginol_node_positive                     1 9418.5
+## - t_stage:differentiate                        10 9420.7
+## - race:progesterone_status                      2 9421.7
+## - t_stage:regional_node_examined                3 9422.5
+## - race:differentiate                            6 9424.4
+## - differentiate:reginol_node_positive           4 9425.3
+## - differentiate:regional_node_examined          4 9425.7
+## - t_stage:estrogen_status                       3 9426.6</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge</code></pre>
+<pre><code>## 
+## Step:  AIC=9413.17
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:race + age:t_stage + age:n_stage + 
+##     age:differentiate + age:estrogen_status + age:progesterone_status + 
+##     age:regional_node_examined + age:reginol_node_positive + 
+##     race:n_stage + race:differentiate + race:estrogen_status + 
+##     race:progesterone_status + race:reginol_node_positive + t_stage:differentiate + 
+##     t_stage:estrogen_status + t_stage:progesterone_status + t_stage:regional_node_examined + 
+##     t_stage:reginol_node_positive + n_stage:differentiate + n_stage:estrogen_status + 
+##     n_stage:progesterone_status + n_stage:regional_node_examined + 
+##     differentiate:progesterone_status + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + estrogen_status:progesterone_status + 
+##     estrogen_status:regional_node_examined + estrogen_status:reginol_node_positive + 
+##     progesterone_status:regional_node_examined + progesterone_status:reginol_node_positive + 
+##     regional_node_examined:reginol_node_positive</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge
+
+## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Ran out of iterations and did not converge</code></pre>
+<pre><code>##                                                Df    AIC
+## - age:differentiate                             4 9409.9
+## - race:n_stage                                  4 9409.9
+## - n_stage:regional_node_examined                2 9410.2
+## - age:t_stage                                   3 9410.6
+## - age:race                                      2 9411.0
+## - regional_node_examined:reginol_node_positive  1 9411.2
+## - age:progesterone_status                       1 9411.2
+## - progesterone_status:regional_node_examined    1 9411.2
+## - estrogen_status:regional_node_examined        1 9411.3
+## - n_stage:progesterone_status                   2 9411.5
+## - n_stage:estrogen_status                       2 9411.5
+## - estrogen_status:reginol_node_positive         1 9411.6
+## - progesterone_status:reginol_node_positive     1 9412.4
+## - race:reginol_node_positive                    2 9412.4
+## - estrogen_status:progesterone_status           1 9412.5
+## - t_stage:progesterone_status                   3 9412.7
+## - age:n_stage                                   2 9412.8
+## - age:estrogen_status                           1 9413.0
+## - differentiate:progesterone_status             4 9413.0
+## - age:regional_node_examined                    1 9413.0
+## - race:estrogen_status                          2 9413.1
+## &lt;none&gt;                                            9413.2
+## - t_stage:reginol_node_positive                 3 9413.9
+## - n_stage:differentiate                         7 9414.8
+## - age:reginol_node_positive                     1 9414.9
+## - t_stage:differentiate                        10 9417.0
+## - race:progesterone_status                      2 9418.3
+## - t_stage:regional_node_examined                3 9418.9
+## - race:differentiate                            6 9420.7
+## - differentiate:reginol_node_positive           4 9421.6
+## - differentiate:regional_node_examined          4 9422.0
+## - t_stage:estrogen_status                       3 9423.2
+## 
+## Step:  AIC=9409.89
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:race + age:t_stage + age:n_stage + 
+##     age:estrogen_status + age:progesterone_status + age:regional_node_examined + 
+##     age:reginol_node_positive + race:n_stage + race:differentiate + 
+##     race:estrogen_status + race:progesterone_status + race:reginol_node_positive + 
+##     t_stage:differentiate + t_stage:estrogen_status + t_stage:progesterone_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     n_stage:differentiate + n_stage:estrogen_status + n_stage:progesterone_status + 
+##     n_stage:regional_node_examined + differentiate:progesterone_status + 
+##     differentiate:regional_node_examined + differentiate:reginol_node_positive + 
+##     estrogen_status:progesterone_status + estrogen_status:regional_node_examined + 
+##     estrogen_status:reginol_node_positive + progesterone_status:regional_node_examined + 
+##     progesterone_status:reginol_node_positive + regional_node_examined:reginol_node_positive
+## 
+##                                                Df    AIC
+## - race:n_stage                                  4 9406.6
+## - n_stage:regional_node_examined                2 9406.9
+## - age:race                                      2 9407.4
+## - age:t_stage                                   3 9407.7
+## - age:progesterone_status                       1 9407.9
+## - regional_node_examined:reginol_node_positive  1 9407.9
+## - progesterone_status:regional_node_examined    1 9407.9
+## - estrogen_status:regional_node_examined        1 9408.1
+## - n_stage:estrogen_status                       2 9408.1
+## - n_stage:progesterone_status                   2 9408.2
+## - estrogen_status:reginol_node_positive         1 9408.4
+## - progesterone_status:reginol_node_positive     1 9409.1
+## - race:reginol_node_positive                    2 9409.1
+## - t_stage:progesterone_status                   3 9409.4
+## - age:n_stage                                   2 9409.6
+## - age:regional_node_examined                    1 9409.7
+## - race:estrogen_status                          2 9409.9
+## &lt;none&gt;                                            9409.9
+## - estrogen_status:progesterone_status           1 9409.9
+## - differentiate:progesterone_status             3 9410.1
+## - t_stage:reginol_node_positive                 3 9410.6
+## - age:estrogen_status                           1 9411.0
+## - age:reginol_node_positive                     1 9411.4
+## - n_stage:differentiate                         6 9413.1
+## - race:progesterone_status                      2 9415.3
+## - t_stage:regional_node_examined                3 9415.9
+## - t_stage:differentiate                         9 9417.2
+## - differentiate:regional_node_examined          3 9418.6
+## - differentiate:reginol_node_positive           3 9419.1
+## - race:differentiate                            5 9419.5
+## - t_stage:estrogen_status                       3 9419.7
+## 
+## Step:  AIC=9406.6
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:race + age:t_stage + age:n_stage + 
+##     age:estrogen_status + age:progesterone_status + age:regional_node_examined + 
+##     age:reginol_node_positive + race:differentiate + race:estrogen_status + 
+##     race:progesterone_status + race:reginol_node_positive + t_stage:differentiate + 
+##     t_stage:estrogen_status + t_stage:progesterone_status + t_stage:regional_node_examined + 
+##     t_stage:reginol_node_positive + n_stage:differentiate + n_stage:estrogen_status + 
+##     n_stage:progesterone_status + n_stage:regional_node_examined + 
+##     differentiate:progesterone_status + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + estrogen_status:progesterone_status + 
+##     estrogen_status:regional_node_examined + estrogen_status:reginol_node_positive + 
+##     progesterone_status:regional_node_examined + progesterone_status:reginol_node_positive + 
+##     regional_node_examined:reginol_node_positive</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Loglik converged before variable 10 ; coefficient may be infinite.</code></pre>
+<pre><code>##                                                Df    AIC
+## - race:reginol_node_positive                    2 9402.6
+## - n_stage:regional_node_examined                2 9403.5
+## - age:race                                      2 9404.1
+## - age:t_stage                                   3 9404.4
+## - age:progesterone_status                       1 9404.6
+## - regional_node_examined:reginol_node_positive  1 9404.6
+## - progesterone_status:regional_node_examined    1 9404.7
+## - estrogen_status:regional_node_examined        1 9404.8
+## - n_stage:estrogen_status                       2 9405.1
+## - estrogen_status:reginol_node_positive         1 9405.3
+## - n_stage:progesterone_status                   2 9405.4
+## - age:n_stage                                   2 9406.1
+## - progesterone_status:reginol_node_positive     1 9406.1
+## - t_stage:progesterone_status                   3 9406.3
+## - age:regional_node_examined                    1 9406.4
+## - race:estrogen_status                          2 9406.5
+## &lt;none&gt;                                            9406.6
+## - differentiate:progesterone_status             3 9406.7
+## - estrogen_status:progesterone_status           1 9406.9
+## - t_stage:reginol_node_positive                 3 9406.9
+## - age:estrogen_status                           1 9407.8
+## - age:reginol_node_positive                     1 9408.0
+## - n_stage:differentiate                         6 9409.6
+## - race:progesterone_status                      2 9411.1
+## - t_stage:regional_node_examined                3 9412.3
+## - t_stage:differentiate                         9 9413.2
+## - differentiate:regional_node_examined          3 9415.2
+## - race:differentiate                            5 9415.3
+## - t_stage:estrogen_status                       3 9416.0
+## - differentiate:reginol_node_positive           3 9416.4
+## 
+## Step:  AIC=9402.65
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:race + age:t_stage + age:n_stage + 
+##     age:estrogen_status + age:progesterone_status + age:regional_node_examined + 
+##     age:reginol_node_positive + race:differentiate + race:estrogen_status + 
+##     race:progesterone_status + t_stage:differentiate + t_stage:estrogen_status + 
+##     t_stage:progesterone_status + t_stage:regional_node_examined + 
+##     t_stage:reginol_node_positive + n_stage:differentiate + n_stage:estrogen_status + 
+##     n_stage:progesterone_status + n_stage:regional_node_examined + 
+##     differentiate:progesterone_status + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + estrogen_status:progesterone_status + 
+##     estrogen_status:regional_node_examined + estrogen_status:reginol_node_positive + 
+##     progesterone_status:regional_node_examined + progesterone_status:reginol_node_positive + 
+##     regional_node_examined:reginol_node_positive</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Loglik converged before variable 10 ; coefficient may be infinite.</code></pre>
+<pre><code>##                                                Df    AIC
+## - n_stage:regional_node_examined                2 9399.6
+## - age:race                                      2 9400.2
+## - age:t_stage                                   3 9400.4
+## - age:progesterone_status                       1 9400.6
+## - regional_node_examined:reginol_node_positive  1 9400.7
+## - progesterone_status:regional_node_examined    1 9400.7
+## - estrogen_status:regional_node_examined        1 9400.8
+## - n_stage:estrogen_status                       2 9401.2
+## - estrogen_status:reginol_node_positive         1 9401.3
+## - n_stage:progesterone_status                   2 9401.5
+## - age:n_stage                                   2 9402.1
+## - progesterone_status:reginol_node_positive     1 9402.1
+## - t_stage:progesterone_status                   3 9402.3
+## - age:regional_node_examined                    1 9402.4
+## - race:estrogen_status                          2 9402.6
+## &lt;none&gt;                                            9402.6
+## - differentiate:progesterone_status             3 9402.7
+## - t_stage:reginol_node_positive                 3 9402.9
+## - estrogen_status:progesterone_status           1 9403.0
+## - age:estrogen_status                           1 9403.9
+## - age:reginol_node_positive                     1 9404.0
+## - n_stage:differentiate                         6 9405.6
+## - race:progesterone_status                      2 9407.1
+## - t_stage:regional_node_examined                3 9408.4
+## - t_stage:differentiate                         9 9409.2
+## - differentiate:regional_node_examined          3 9411.3
+## - race:differentiate                            5 9411.3
+## - t_stage:estrogen_status                       3 9412.1
+## - differentiate:reginol_node_positive           3 9412.5
+## 
+## Step:  AIC=9399.57
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:race + age:t_stage + age:n_stage + 
+##     age:estrogen_status + age:progesterone_status + age:regional_node_examined + 
+##     age:reginol_node_positive + race:differentiate + race:estrogen_status + 
+##     race:progesterone_status + t_stage:differentiate + t_stage:estrogen_status + 
+##     t_stage:progesterone_status + t_stage:regional_node_examined + 
+##     t_stage:reginol_node_positive + n_stage:differentiate + n_stage:estrogen_status + 
+##     n_stage:progesterone_status + differentiate:progesterone_status + 
+##     differentiate:regional_node_examined + differentiate:reginol_node_positive + 
+##     estrogen_status:progesterone_status + estrogen_status:regional_node_examined + 
+##     estrogen_status:reginol_node_positive + progesterone_status:regional_node_examined + 
+##     progesterone_status:reginol_node_positive + regional_node_examined:reginol_node_positive
+## 
+##                                                Df    AIC
+## - age:race                                      2 9397.2
+## - age:t_stage                                   3 9397.3
+## - age:progesterone_status                       1 9397.6
+## - progesterone_status:regional_node_examined    1 9397.6
+## - estrogen_status:regional_node_examined        1 9397.7
+## - regional_node_examined:reginol_node_positive  1 9398.1
+## - n_stage:estrogen_status                       2 9398.2
+## - estrogen_status:reginol_node_positive         1 9398.3
+## - n_stage:progesterone_status                   2 9398.5
+## - age:n_stage                                   2 9399.1
+## - t_stage:progesterone_status                   3 9399.2
+## - progesterone_status:reginol_node_positive     1 9399.2
+## - race:estrogen_status                          2 9399.3
+## - age:regional_node_examined                    1 9399.4
+## &lt;none&gt;                                            9399.6
+## - differentiate:progesterone_status             3 9399.7
+## - t_stage:reginol_node_positive                 3 9399.8
+## - estrogen_status:progesterone_status           1 9399.9
+## - age:estrogen_status                           1 9400.7
+## - age:reginol_node_positive                     1 9401.0
+## - n_stage:differentiate                         6 9402.6
+## - race:progesterone_status                      2 9403.9
+## - t_stage:regional_node_examined                3 9405.6
+## - t_stage:differentiate                         9 9406.1
+## - differentiate:regional_node_examined          3 9407.8
+## - race:differentiate                            5 9408.0
+## - t_stage:estrogen_status                       3 9409.0
+## - differentiate:reginol_node_positive           3 9409.3
+## 
+## Step:  AIC=9397.17
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:t_stage + age:n_stage + age:estrogen_status + 
+##     age:progesterone_status + age:regional_node_examined + age:reginol_node_positive + 
+##     race:differentiate + race:estrogen_status + race:progesterone_status + 
+##     t_stage:differentiate + t_stage:estrogen_status + t_stage:progesterone_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     n_stage:differentiate + n_stage:estrogen_status + n_stage:progesterone_status + 
+##     differentiate:progesterone_status + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + estrogen_status:progesterone_status + 
+##     estrogen_status:regional_node_examined + estrogen_status:reginol_node_positive + 
+##     progesterone_status:regional_node_examined + progesterone_status:reginol_node_positive + 
+##     regional_node_examined:reginol_node_positive
+## 
+##                                                Df    AIC
+## - age:t_stage                                   3 9394.9
+## - age:progesterone_status                       1 9395.2
+## - progesterone_status:regional_node_examined    1 9395.2
+## - estrogen_status:regional_node_examined        1 9395.3
+## - regional_node_examined:reginol_node_positive  1 9395.8
+## - n_stage:estrogen_status                       2 9395.9
+## - estrogen_status:reginol_node_positive         1 9395.9
+## - n_stage:progesterone_status                   2 9396.1
+## - t_stage:progesterone_status                   3 9396.7
+## - progesterone_status:reginol_node_positive     1 9396.9
+## - race:estrogen_status                          2 9396.9
+## - differentiate:progesterone_status             3 9397.0
+## - age:n_stage                                   2 9397.0
+## - age:regional_node_examined                    1 9397.1
+## &lt;none&gt;                                            9397.2
+## - estrogen_status:progesterone_status           1 9397.6
+## - t_stage:reginol_node_positive                 3 9397.6
+## - age:estrogen_status                           1 9398.6
+## - age:reginol_node_positive                     1 9399.0
+## - n_stage:differentiate                         6 9399.8
+## - race:progesterone_status                      2 9401.9
+## - t_stage:regional_node_examined                3 9403.7
+## - t_stage:differentiate                         9 9403.8
+## - differentiate:regional_node_examined          3 9405.1
+## - race:differentiate                            5 9405.4
+## - differentiate:reginol_node_positive           3 9406.6
+## - t_stage:estrogen_status                       3 9406.7
+## 
+## Step:  AIC=9394.88
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:progesterone_status + age:regional_node_examined + age:reginol_node_positive + 
+##     race:differentiate + race:estrogen_status + race:progesterone_status + 
+##     t_stage:differentiate + t_stage:estrogen_status + t_stage:progesterone_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     n_stage:differentiate + n_stage:estrogen_status + n_stage:progesterone_status + 
+##     differentiate:progesterone_status + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + estrogen_status:progesterone_status + 
+##     estrogen_status:regional_node_examined + estrogen_status:reginol_node_positive + 
+##     progesterone_status:regional_node_examined + progesterone_status:reginol_node_positive + 
+##     regional_node_examined:reginol_node_positive
+## 
+##                                                Df    AIC
+## - age:progesterone_status                       1 9392.9
+## - progesterone_status:regional_node_examined    1 9392.9
+## - estrogen_status:regional_node_examined        1 9393.0
+## - estrogen_status:reginol_node_positive         1 9393.5
+## - regional_node_examined:reginol_node_positive  1 9393.5
+## - n_stage:estrogen_status                       2 9393.6
+## - n_stage:progesterone_status                   2 9393.7
+## - differentiate:progesterone_status             3 9394.2
+## - progesterone_status:reginol_node_positive     1 9394.5
+## - race:estrogen_status                          2 9394.8
+## - age:regional_node_examined                    1 9394.8
+## &lt;none&gt;                                            9394.9
+## - t_stage:reginol_node_positive                 3 9395.2
+## - t_stage:progesterone_status                   3 9395.3
+## - estrogen_status:progesterone_status           1 9395.4
+## - age:n_stage                                   2 9396.2
+## - age:estrogen_status                           1 9397.0
+## - n_stage:differentiate                         6 9397.1
+## - age:reginol_node_positive                     1 9397.2
+## - race:progesterone_status                      2 9399.3
+## - t_stage:differentiate                         9 9401.0
+## - t_stage:regional_node_examined                3 9401.3
+## - differentiate:regional_node_examined          3 9402.7
+## - race:differentiate                            5 9403.0
+## - differentiate:reginol_node_positive           3 9404.0
+## - t_stage:estrogen_status                       3 9407.0
+## 
+## Step:  AIC=9392.9
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:regional_node_examined + age:reginol_node_positive + 
+##     race:differentiate + race:estrogen_status + race:progesterone_status + 
+##     t_stage:differentiate + t_stage:estrogen_status + t_stage:progesterone_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     n_stage:differentiate + n_stage:estrogen_status + n_stage:progesterone_status + 
+##     differentiate:progesterone_status + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + estrogen_status:progesterone_status + 
+##     estrogen_status:regional_node_examined + estrogen_status:reginol_node_positive + 
+##     progesterone_status:regional_node_examined + progesterone_status:reginol_node_positive + 
+##     regional_node_examined:reginol_node_positive
+## 
+##                                                Df    AIC
+## - progesterone_status:regional_node_examined    1 9391.0
+## - estrogen_status:regional_node_examined        1 9391.0
+## - estrogen_status:reginol_node_positive         1 9391.5
+## - regional_node_examined:reginol_node_positive  1 9391.6
+## - n_stage:estrogen_status                       2 9391.6
+## - n_stage:progesterone_status                   2 9391.7
+## - differentiate:progesterone_status             3 9392.2
+## - progesterone_status:reginol_node_positive     1 9392.5
+## - age:regional_node_examined                    1 9392.8
+## - race:estrogen_status                          2 9392.8
+## &lt;none&gt;                                            9392.9
+## - t_stage:progesterone_status                   3 9393.3
+## - t_stage:reginol_node_positive                 3 9393.3
+## - estrogen_status:progesterone_status           1 9393.4
+## - age:n_stage                                   2 9394.2
+## - n_stage:differentiate                         6 9395.1
+## - age:reginol_node_positive                     1 9395.2
+## - race:progesterone_status                      2 9397.3
+## - age:estrogen_status                           1 9397.6
+## - t_stage:differentiate                         9 9399.0
+## - t_stage:regional_node_examined                3 9399.4
+## - differentiate:regional_node_examined          3 9400.7
+## - race:differentiate                            5 9401.1
+## - differentiate:reginol_node_positive           3 9402.0
+## - t_stage:estrogen_status                       3 9405.0
+## 
+## Step:  AIC=9390.96
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:regional_node_examined + age:reginol_node_positive + 
+##     race:differentiate + race:estrogen_status + race:progesterone_status + 
+##     t_stage:differentiate + t_stage:estrogen_status + t_stage:progesterone_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     n_stage:differentiate + n_stage:estrogen_status + n_stage:progesterone_status + 
+##     differentiate:progesterone_status + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + estrogen_status:progesterone_status + 
+##     estrogen_status:regional_node_examined + estrogen_status:reginol_node_positive + 
+##     progesterone_status:reginol_node_positive + regional_node_examined:reginol_node_positive
+## 
+##                                                Df    AIC
+## - estrogen_status:regional_node_examined        1 9389.0
+## - estrogen_status:reginol_node_positive         1 9389.5
+## - regional_node_examined:reginol_node_positive  1 9389.6
+## - n_stage:estrogen_status                       2 9389.6
+## - n_stage:progesterone_status                   2 9389.8
+## - differentiate:progesterone_status             3 9390.4
+## - progesterone_status:reginol_node_positive     1 9390.6
+## - age:regional_node_examined                    1 9390.9
+## - race:estrogen_status                          2 9390.9
+## &lt;none&gt;                                            9391.0
+## - t_stage:reginol_node_positive                 3 9391.3
+## - t_stage:progesterone_status                   3 9391.4
+## - estrogen_status:progesterone_status           1 9391.6
+## - age:n_stage                                   2 9392.3
+## - n_stage:differentiate                         6 9393.2
+## - age:reginol_node_positive                     1 9393.3
+## - race:progesterone_status                      2 9395.4
+## - age:estrogen_status                           1 9395.7
+## - t_stage:differentiate                         9 9397.2
+## - t_stage:regional_node_examined                3 9397.4
+## - differentiate:regional_node_examined          3 9398.8
+## - race:differentiate                            5 9399.1
+## - differentiate:reginol_node_positive           3 9400.1
+## - t_stage:estrogen_status                       3 9403.2
+## 
+## Step:  AIC=9389
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:regional_node_examined + age:reginol_node_positive + 
+##     race:differentiate + race:estrogen_status + race:progesterone_status + 
+##     t_stage:differentiate + t_stage:estrogen_status + t_stage:progesterone_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     n_stage:differentiate + n_stage:estrogen_status + n_stage:progesterone_status + 
+##     differentiate:progesterone_status + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + estrogen_status:progesterone_status + 
+##     estrogen_status:reginol_node_positive + progesterone_status:reginol_node_positive + 
+##     regional_node_examined:reginol_node_positive
+## 
+##                                                Df    AIC
+## - estrogen_status:reginol_node_positive         1 9387.5
+## - n_stage:estrogen_status                       2 9387.7
+## - regional_node_examined:reginol_node_positive  1 9387.7
+## - n_stage:progesterone_status                   2 9387.8
+## - differentiate:progesterone_status             3 9388.4
+## - progesterone_status:reginol_node_positive     1 9388.7
+## - age:regional_node_examined                    1 9388.9
+## - race:estrogen_status                          2 9388.9
+## &lt;none&gt;                                            9389.0
+## - t_stage:reginol_node_positive                 3 9389.5
+## - t_stage:progesterone_status                   3 9389.5
+## - estrogen_status:progesterone_status           1 9389.6
+## - age:n_stage                                   2 9390.3
+## - n_stage:differentiate                         6 9391.3
+## - age:reginol_node_positive                     1 9391.3
+## - race:progesterone_status                      2 9393.4
+## - age:estrogen_status                           1 9393.7
+## - t_stage:differentiate                         9 9395.2
+## - t_stage:regional_node_examined                3 9395.7
+## - differentiate:regional_node_examined          3 9396.8
+## - race:differentiate                            5 9397.1
+## - differentiate:reginol_node_positive           3 9398.1
+## - t_stage:estrogen_status                       3 9401.3
+## 
+## Step:  AIC=9387.55
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:regional_node_examined + age:reginol_node_positive + 
+##     race:differentiate + race:estrogen_status + race:progesterone_status + 
+##     t_stage:differentiate + t_stage:estrogen_status + t_stage:progesterone_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     n_stage:differentiate + n_stage:estrogen_status + n_stage:progesterone_status + 
+##     differentiate:progesterone_status + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + estrogen_status:progesterone_status + 
+##     progesterone_status:reginol_node_positive + regional_node_examined:reginol_node_positive
+## 
+##                                                Df    AIC
+## - n_stage:estrogen_status                       2 9385.7
+## - n_stage:progesterone_status                   2 9385.8
+## - regional_node_examined:reginol_node_positive  1 9386.0
+## - progesterone_status:reginol_node_positive     1 9386.7
+## - differentiate:progesterone_status             3 9386.9
+## - age:regional_node_examined                    1 9387.4
+## &lt;none&gt;                                            9387.5
+## - race:estrogen_status                          2 9387.6
+## - t_stage:progesterone_status                   3 9387.7
+## - t_stage:reginol_node_positive                 3 9388.0
+## - estrogen_status:progesterone_status           1 9388.2
+## - age:n_stage                                   2 9388.5
+## - age:reginol_node_positive                     1 9389.4
+## - n_stage:differentiate                         6 9390.0
+## - race:progesterone_status                      2 9392.2
+## - age:estrogen_status                           1 9392.2
+## - t_stage:differentiate                         9 9394.0
+## - t_stage:regional_node_examined                3 9394.1
+## - differentiate:regional_node_examined          3 9395.3
+## - race:differentiate                            5 9395.9
+## - differentiate:reginol_node_positive           3 9397.0
+## - t_stage:estrogen_status                       3 9399.4
+## 
+## Step:  AIC=9385.72
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:regional_node_examined + age:reginol_node_positive + 
+##     race:differentiate + race:estrogen_status + race:progesterone_status + 
+##     t_stage:differentiate + t_stage:estrogen_status + t_stage:progesterone_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     n_stage:differentiate + n_stage:progesterone_status + differentiate:progesterone_status + 
+##     differentiate:regional_node_examined + differentiate:reginol_node_positive + 
+##     estrogen_status:progesterone_status + progesterone_status:reginol_node_positive + 
+##     regional_node_examined:reginol_node_positive</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Loglik converged before variable 29 ; coefficient may be infinite.</code></pre>
+<pre><code>##                                                Df    AIC
+## - n_stage:progesterone_status                   2 9382.6
+## - regional_node_examined:reginol_node_positive  1 9384.3
+## - progesterone_status:reginol_node_positive     1 9384.9
+## - t_stage:progesterone_status                   3 9385.4
+## - age:regional_node_examined                    1 9385.6
+## - differentiate:progesterone_status             3 9385.7
+## &lt;none&gt;                                            9385.7
+## - race:estrogen_status                          2 9385.8
+## - estrogen_status:progesterone_status           1 9385.9
+## - t_stage:reginol_node_positive                 3 9386.0
+## - age:n_stage                                   2 9386.6
+## - age:reginol_node_positive                     1 9387.8
+## - n_stage:differentiate                         6 9388.9
+## - race:progesterone_status                      2 9389.8
+## - age:estrogen_status                           1 9390.1
+## - t_stage:regional_node_examined                3 9391.8
+## - t_stage:differentiate                         9 9392.7
+## - differentiate:regional_node_examined          3 9393.9
+## - race:differentiate                            5 9394.5
+## - differentiate:reginol_node_positive           3 9395.7
+## - t_stage:estrogen_status                       3 9396.1
+## 
+## Step:  AIC=9382.6
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:regional_node_examined + age:reginol_node_positive + 
+##     race:differentiate + race:estrogen_status + race:progesterone_status + 
+##     t_stage:differentiate + t_stage:estrogen_status + t_stage:progesterone_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     n_stage:differentiate + differentiate:progesterone_status + 
+##     differentiate:regional_node_examined + differentiate:reginol_node_positive + 
+##     estrogen_status:progesterone_status + progesterone_status:reginol_node_positive + 
+##     regional_node_examined:reginol_node_positive
+## 
+##                                                Df    AIC
+## - regional_node_examined:reginol_node_positive  1 9381.2
+## - t_stage:progesterone_status                   3 9381.9
+## - progesterone_status:reginol_node_positive     1 9382.3
+## - age:regional_node_examined                    1 9382.5
+## &lt;none&gt;                                            9382.6
+## - differentiate:progesterone_status             3 9382.6
+## - race:estrogen_status                          2 9382.6
+## - estrogen_status:progesterone_status           1 9382.8
+## - t_stage:reginol_node_positive                 3 9383.0
+## - age:n_stage                                   2 9383.6
+## - age:reginol_node_positive                     1 9384.8
+## - n_stage:differentiate                         6 9385.6
+## - race:progesterone_status                      2 9386.6
+## - age:estrogen_status                           1 9387.0
+## - t_stage:regional_node_examined                3 9389.0
+## - t_stage:differentiate                         9 9389.6
+## - differentiate:regional_node_examined          3 9391.0
+## - race:differentiate                            5 9391.4
+## - differentiate:reginol_node_positive           3 9392.6
+## - t_stage:estrogen_status                       3 9393.1
+## 
+## Step:  AIC=9381.16
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:regional_node_examined + age:reginol_node_positive + 
+##     race:differentiate + race:estrogen_status + race:progesterone_status + 
+##     t_stage:differentiate + t_stage:estrogen_status + t_stage:progesterone_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     n_stage:differentiate + differentiate:progesterone_status + 
+##     differentiate:regional_node_examined + differentiate:reginol_node_positive + 
+##     estrogen_status:progesterone_status + progesterone_status:reginol_node_positive</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Loglik converged before variable 29 ; coefficient may be infinite.</code></pre>
+<pre><code>## Warning in coxph.fit(X, Y, istrat, offset, init, control, weights = weights, :
+## Loglik converged before variable 10 ; coefficient may be infinite.</code></pre>
+<pre><code>##                                             Df    AIC
+## - t_stage:progesterone_status                3 9380.6
+## - progesterone_status:reginol_node_positive  1 9380.8
+## - age:regional_node_examined                 1 9381.0
+## &lt;none&gt;                                         9381.2
+## - race:estrogen_status                       2 9381.2
+## - differentiate:progesterone_status          3 9381.3
+## - estrogen_status:progesterone_status        1 9381.5
+## - t_stage:reginol_node_positive              3 9381.9
+## - age:n_stage                                2 9381.9
+## - age:reginol_node_positive                  1 9383.1
+## - n_stage:differentiate                      6 9384.2
+## - race:progesterone_status                   2 9385.2
+## - age:estrogen_status                        1 9385.6
+## - t_stage:regional_node_examined             3 9387.5
+## - t_stage:differentiate                      9 9388.3
+## - differentiate:regional_node_examined       3 9389.6
+## - race:differentiate                         5 9390.1
+## - differentiate:reginol_node_positive        3 9391.2
+## - t_stage:estrogen_status                    3 9392.0
+## 
+## Step:  AIC=9380.58
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:regional_node_examined + age:reginol_node_positive + 
+##     race:differentiate + race:estrogen_status + race:progesterone_status + 
+##     t_stage:differentiate + t_stage:estrogen_status + t_stage:regional_node_examined + 
+##     t_stage:reginol_node_positive + n_stage:differentiate + differentiate:progesterone_status + 
+##     differentiate:regional_node_examined + differentiate:reginol_node_positive + 
+##     estrogen_status:progesterone_status + progesterone_status:reginol_node_positive
+## 
+##                                             Df    AIC
+## - age:regional_node_examined                 1 9380.0
+## - differentiate:progesterone_status          3 9380.3
+## - estrogen_status:progesterone_status        1 9380.4
+## &lt;none&gt;                                         9380.6
+## - race:estrogen_status                       2 9380.7
+## - progesterone_status:reginol_node_positive  1 9380.8
+## - age:n_stage                                2 9381.5
+## - t_stage:reginol_node_positive              3 9381.5
+## - age:reginol_node_positive                  1 9382.5
+## - n_stage:differentiate                      6 9383.2
+## - race:progesterone_status                   2 9384.3
+## - age:estrogen_status                        1 9384.8
+## - t_stage:regional_node_examined             3 9386.9
+## - t_stage:differentiate                      9 9387.3
+## - differentiate:regional_node_examined       3 9388.4
+## - race:differentiate                         5 9389.4
+## - t_stage:estrogen_status                    3 9389.9
+## - differentiate:reginol_node_positive        3 9390.1
+## 
+## Step:  AIC=9380.03
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:reginol_node_positive + race:differentiate + race:estrogen_status + 
+##     race:progesterone_status + t_stage:differentiate + t_stage:estrogen_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     n_stage:differentiate + differentiate:progesterone_status + 
+##     differentiate:regional_node_examined + differentiate:reginol_node_positive + 
+##     estrogen_status:progesterone_status + progesterone_status:reginol_node_positive
+## 
+##                                             Df    AIC
+## - differentiate:progesterone_status          3 9379.9
+## - estrogen_status:progesterone_status        1 9379.9
+## &lt;none&gt;                                         9380.0
+## - race:estrogen_status                       2 9380.2
+## - progesterone_status:reginol_node_positive  1 9380.2
+## - age:n_stage                                2 9380.4
+## - age:reginol_node_positive                  1 9380.7
+## - t_stage:reginol_node_positive              3 9381.0
+## - n_stage:differentiate                      6 9383.2
+## - race:progesterone_status                   2 9384.0
+## - age:estrogen_status                        1 9384.6
+## - t_stage:regional_node_examined             3 9386.5
+## - t_stage:differentiate                      9 9387.4
+## - differentiate:regional_node_examined       3 9387.8
+## - race:differentiate                         5 9389.1
+## - t_stage:estrogen_status                    3 9389.8
+## - differentiate:reginol_node_positive        3 9389.9
+## 
+## Step:  AIC=9379.91
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:reginol_node_positive + race:differentiate + race:estrogen_status + 
+##     race:progesterone_status + t_stage:differentiate + t_stage:estrogen_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     n_stage:differentiate + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + estrogen_status:progesterone_status + 
+##     progesterone_status:reginol_node_positive
+## 
+##                                             Df    AIC
+## - estrogen_status:progesterone_status        1 9378.7
+## - n_stage:differentiate                      6 9378.8
+## - race:estrogen_status                       2 9379.6
+## &lt;none&gt;                                         9379.9
+## - age:reginol_node_positive                  1 9380.5
+## - progesterone_status:reginol_node_positive  1 9380.5
+## - age:n_stage                                2 9380.5
+## - t_stage:reginol_node_positive              3 9381.2
+## - t_stage:differentiate                      9 9383.4
+## - race:progesterone_status                   2 9383.4
+## - differentiate:regional_node_examined       3 9383.4
+## - race:differentiate                         5 9383.8
+## - age:estrogen_status                        1 9384.0
+## - differentiate:reginol_node_positive        3 9386.4
+## - t_stage:regional_node_examined             3 9386.4
+## - t_stage:estrogen_status                    3 9389.6
+## 
+## Step:  AIC=9378.7
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:reginol_node_positive + race:differentiate + race:estrogen_status + 
+##     race:progesterone_status + t_stage:differentiate + t_stage:estrogen_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     n_stage:differentiate + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + progesterone_status:reginol_node_positive
+## 
+##                                             Df    AIC
+## - n_stage:differentiate                      6 9377.8
+## - race:estrogen_status                       2 9378.0
+## &lt;none&gt;                                         9378.7
+## - progesterone_status:reginol_node_positive  1 9379.2
+## - age:reginol_node_positive                  1 9379.3
+## - age:n_stage                                2 9379.3
+## - t_stage:reginol_node_positive              3 9380.5
+## - race:progesterone_status                   2 9381.8
+## - differentiate:regional_node_examined       3 9381.9
+## - t_stage:differentiate                      9 9382.2
+## - age:estrogen_status                        1 9382.6
+## - race:differentiate                         5 9383.3
+## - differentiate:reginol_node_positive        3 9385.1
+## - t_stage:regional_node_examined             3 9385.7
+## - t_stage:estrogen_status                    3 9388.4
+## 
+## Step:  AIC=9377.83
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:reginol_node_positive + race:differentiate + race:estrogen_status + 
+##     race:progesterone_status + t_stage:differentiate + t_stage:estrogen_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     differentiate:regional_node_examined + differentiate:reginol_node_positive + 
+##     progesterone_status:reginol_node_positive
+## 
+##                                             Df    AIC
+## - race:differentiate                         5 9374.4
+## - t_stage:differentiate                      9 9374.8
+## - race:estrogen_status                       2 9377.2
+## &lt;none&gt;                                         9377.8
+## - age:n_stage                                2 9378.0
+## - age:reginol_node_positive                  1 9378.0
+## - progesterone_status:reginol_node_positive  1 9378.2
+## - differentiate:regional_node_examined       3 9378.5
+## - t_stage:reginol_node_positive              3 9379.5
+## - race:progesterone_status                   2 9381.0
+## - age:estrogen_status                        1 9381.1
+## - differentiate:reginol_node_positive        3 9382.3
+## - t_stage:regional_node_examined             3 9385.0
+## - t_stage:estrogen_status                    3 9385.8
+## 
+## Step:  AIC=9374.44
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:reginol_node_positive + race:estrogen_status + race:progesterone_status + 
+##     t_stage:differentiate + t_stage:estrogen_status + t_stage:regional_node_examined + 
+##     t_stage:reginol_node_positive + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + progesterone_status:reginol_node_positive
+## 
+##                                             Df    AIC
+## - t_stage:differentiate                      9 9368.8
+## - differentiate:regional_node_examined       3 9373.1
+## - age:n_stage                                2 9374.2
+## - race:estrogen_status                       2 9374.3
+## - age:reginol_node_positive                  1 9374.4
+## &lt;none&gt;                                         9374.4
+## - progesterone_status:reginol_node_positive  1 9374.7
+## - t_stage:reginol_node_positive              3 9376.2
+## - differentiate:reginol_node_positive        3 9376.6
+## - age:estrogen_status                        1 9377.0
+## - race:progesterone_status                   2 9377.9
+## - t_stage:estrogen_status                    3 9381.3
+## - t_stage:regional_node_examined             3 9382.2
+## 
+## Step:  AIC=9368.84
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:reginol_node_positive + race:estrogen_status + race:progesterone_status + 
+##     t_stage:estrogen_status + t_stage:regional_node_examined + 
+##     t_stage:reginol_node_positive + differentiate:regional_node_examined + 
+##     differentiate:reginol_node_positive + progesterone_status:reginol_node_positive
+## 
+##                                             Df    AIC
+## - differentiate:regional_node_examined       3 9366.9
+## - age:n_stage                                2 9367.9
+## - age:reginol_node_positive                  1 9368.7
+## - differentiate:reginol_node_positive        3 9368.8
+## &lt;none&gt;                                         9368.8
+## - race:estrogen_status                       2 9368.9
+## - progesterone_status:reginol_node_positive  1 9369.0
+## - t_stage:reginol_node_positive              3 9369.3
+## - age:estrogen_status                        1 9370.6
+## - race:progesterone_status                   2 9372.5
+## - t_stage:estrogen_status                    3 9374.1
+## - t_stage:regional_node_examined             3 9375.4
+## 
+## Step:  AIC=9366.94
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:n_stage + age:estrogen_status + 
+##     age:reginol_node_positive + race:estrogen_status + race:progesterone_status + 
+##     t_stage:estrogen_status + t_stage:regional_node_examined + 
+##     t_stage:reginol_node_positive + differentiate:reginol_node_positive + 
+##     progesterone_status:reginol_node_positive
+## 
+##                                             Df    AIC
+## - age:n_stage                                2 9366.2
+## - age:reginol_node_positive                  1 9366.9
+## &lt;none&gt;                                         9366.9
+## - race:estrogen_status                       2 9367.0
+## - progesterone_status:reginol_node_positive  1 9367.1
+## - t_stage:reginol_node_positive              3 9367.3
+## - differentiate:reginol_node_positive        3 9368.5
+## - age:estrogen_status                        1 9368.7
+## - race:progesterone_status                   2 9370.8
+## - t_stage:estrogen_status                    3 9372.1
+## - t_stage:regional_node_examined             3 9373.5
+## 
+## Step:  AIC=9366.19
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:estrogen_status + age:reginol_node_positive + 
+##     race:estrogen_status + race:progesterone_status + t_stage:estrogen_status + 
+##     t_stage:regional_node_examined + t_stage:reginol_node_positive + 
+##     differentiate:reginol_node_positive + progesterone_status:reginol_node_positive
+## 
+##                                             Df    AIC
+## - age:reginol_node_positive                  1 9364.3
+## &lt;none&gt;                                         9366.2
+## - race:estrogen_status                       2 9366.2
+## - t_stage:reginol_node_positive              3 9366.5
+## - progesterone_status:reginol_node_positive  1 9366.8
+## - differentiate:reginol_node_positive        3 9367.0
+## - age:estrogen_status                        1 9368.3
+## - race:progesterone_status                   2 9370.1
+## - t_stage:estrogen_status                    3 9372.1
+## - t_stage:regional_node_examined             3 9372.9
+## - n_stage                                    2 9377.0
+## 
+## Step:  AIC=9364.29
+## Surv(survival_months, status) ~ age + race + t_stage + n_stage + 
+##     differentiate + estrogen_status + progesterone_status + regional_node_examined + 
+##     reginol_node_positive + age:estrogen_status + race:estrogen_status + 
+##     race:progesterone_status + t_stage:estrogen_status + t_stage:regional_node_examined + 
+##     t_stage:reginol_node_positive + differentiate:reginol_node_positive + 
+##     progesterone_status:reginol_node_positive
+## 
+##                                             Df    AIC
+## &lt;none&gt;                                         9364.3
+## - race:estrogen_status                       2 9364.3
+## - t_stage:reginol_node_positive              3 9364.7
+## - progesterone_status:reginol_node_positive  1 9364.8
+## - differentiate:reginol_node_positive        3 9365.3
+## - age:estrogen_status                        1 9366.5
+## - race:progesterone_status                   2 9368.2
+## - t_stage:estrogen_status                    3 9370.1
+## - t_stage:regional_node_examined             3 9371.0
+## - n_stage                                    2 9375.1</code></pre>
+<p>However, there are still a lot of insignificant variables in this
+model. We decide to remove these variables from this model to have a
+better performance.</p>
+<pre class="r"><code>model3=update(model3,.~.-race:estrogen_status-t_stage:regional_node_examined-t_stage:reginol_node_positive -differentiate:reginol_node_positive-progesterone_status:reginol_node_positive)</code></pre>
+<p>Then, we use AIC to compare the model without interaction variables
+and model with interaction variables.</p>
+<pre class="r"><code>AIC(model2,model3)</code></pre>
+<pre><code>##        df      AIC
+## model2 15 9377.367
+## model3 21 9367.891</code></pre>
+<p>Since model with interaction variables has smaller AIC, we consider
+this model as our final model.</p>
+<p>After fitting the Cox model to the data, it is possible to visualize
+the predicted survival for a specific risk group at any given time
+point. The function <code>survfit</code> estimates survival
+proportions.</p>
+<p>Unlike the KM survival curve, the Cox model fit curve outputs the
+predicted survival after correcting for other variables, rather than the
+actual observed survival.</p>
+<pre class="r"><code>ggsurvplot(survfit(model3,data=cancer_df), palette= &#39;#2E9FDF&#39;,
            ggtheme = theme_minimal())</code></pre>
-<p><img src="data:image/png;base64,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" width="672" /></p>
+<p><img src="data:image/png;base64,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" width="672" /></p>
+<p>We may wish to show how estimated survival is affected by specific
+variable. Using race as an example, we can plot the survival
+probabilities of different races over time when all other variables are
+equal</p>
+<pre class="r"><code>fit &lt;- survfit(Surv(survival_months,status)~race,data=cancer_df)
+ggsurvplot(fit, conf.int = TRUE, 
+           ggtheme = theme_minimal(),ylim=c(0.6,1))</code></pre>
+<p><img src="data:image/png;base64,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" width="672" /></p>
 
 
 
