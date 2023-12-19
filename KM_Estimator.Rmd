@@ -1,5 +1,5 @@
 ---
-title: "Breast cancer survival prediction"
+title: "KM Estimator"
 author: "Yangyang Chen"
 date: "`r Sys.Date()`"
 output: pdf_document
