@@ -129,7 +129,7 @@ cancer_df =
 ```
 The numeric descriptive statistics are:
 
-`r cancer_df |> select_if(is.numeric) |> summary() |> knitr::kable(digits = 3)`
+`r cancer_df |> select_if(is.numeric) |> summary() |> knitr::kable(digits = 3, col.names = c('age', "tumor_size", 'examined_node', 'positive_node', 'survival_month', 'status'))`
 
 
 ```{r message=FALSE, echo=FALSE}
